@@ -1,58 +1,91 @@
-import Button from "react-bootstrap/Button";
-import Container from "react-bootstrap/Container";
-import Form from "react-bootstrap/Form";
-import Nav from "react-bootstrap/Nav";
-import Navbar from "react-bootstrap/Navbar";
-import "bootstrap/dist/css/bootstrap.min.css";
-import { BsSearch } from "react-icons/bs";
-import "../css/Navbar.css";
-import { Col } from "react-bootstrap";
+import React from "react";
+import {
+  Navbar,
+  Nav,
+  Form,
+  FormControl,
+  Button,
+  Container,
+} from "react-bootstrap";
+import { BsSearch, BsBell } from "react-icons/bs";
+import logo from "../assets/logo.png";
+import "../css/NavBar.css";
 
 function NavbarDefault() {
-    function handleSearch(e) {
-        e.preventDefault();
-        alert("Search button clicked");
-      }
+  const [searchQuery, setSearchQuery] = React.useState("");
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    alert(`Searching for ${searchQuery}`);
+  };
 
   return (
-      <Navbar expand="xl" className="bg-body-tertiary">
-        <Container fluid>
-          <Navbar.Brand href="#">JoinCast</Navbar.Brand>
-          <Navbar.Toggle aria-controls="navbarScroll" />
-          <Navbar.Collapse id="navbarScroll">
-            <Col>
-              <Nav
-                className="me-auto my-2 my-lg-0"
-                style={{ maxHeight: "100px" }}
-                navbarScroll
-              >
-                <Nav.Link href="#action1">Following</Nav.Link>
-                <Nav.Link href="#action2">Explore</Nav.Link>
-              </Nav>
-            </Col>
-            <Col>
-              <Form className="d-flex search-form" > 
-                <Form.Control
-                  type="search"
-                  placeholder="Search"
-                  className="me-2"
-                  aria-label="Search"
-                />
-                <Button variant="link" onClick={handleSearch}>
-                  <BsSearch />
-                </Button>
-              </Form>
-            </Col>
-            <Col className="d-flex justify-content-end align-items-center">
-              <img
-                src="path/to/avatar.jpg"
-                alt="User Avatar"
-                className="avatar"
-              />
-            </Col>
-          </Navbar.Collapse>
-        </Container>
-      </Navbar>
+    <Navbar
+      bg="light"
+      expand="lg"
+      style={{
+        height: "60px",
+        padding: "0.5rem 0",
+      }}
+    >
+      <Container>
+        {/* Left Section */}
+        <div className="d-flex align-items-center" style={{ width: "250px" }}>
+          <Navbar.Brand href="#" className="me-3">
+            <img
+              src={logo}
+              className="d-inline-block align-top logo"
+              alt="Logo"
+            />
+          </Navbar.Brand>
+          <Nav className="align-items-center">
+            <Nav.Link href="#following" className="px-2">
+              Following
+            </Nav.Link>
+            <Nav.Link href="#explore" className="px-2">
+              Explore
+            </Nav.Link>
+          </Nav>
+        </div>
+
+        {/* Middle Section */}
+        <Form className="d-flex mx-4" style={{ maxWidth: "500px", flex: 1 }}>
+          <FormControl
+            type="search"
+            placeholder="Search"
+            className="me-2"
+            aria-label="Search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <Button 
+          variant="link" 
+          style={{ minWidth: "40px" }}
+          type="submit"
+          onClick={handleSearch}
+          >
+            <BsSearch size={20} color="345766" />
+          </Button>
+        </Form>
+
+        {/* Right Section */}
+        <div
+          className="d-flex align-items-center"
+          style={{ width: "250px", justifyContent: "flex-end" }}
+        >
+          <Nav.Link href="#notifications" className="me-3">
+            <BsBell size={20} />
+          </Nav.Link>
+          <Nav.Link href="#profile">
+            <img
+              src="https://static.wikia.nocookie.net/attack-vampire/images/1/18/Eren_Jaeger.png/revision/latest/scale-to-width-down/215?cb=20190722000208"
+              className="rounded-circle avatar"
+              alt="Avatar"
+            />
+          </Nav.Link>
+        </div>
+      </Container>
+    </Navbar>
   );
 }
 

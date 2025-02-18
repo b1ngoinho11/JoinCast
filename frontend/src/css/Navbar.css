@@ -1,14 +1,18 @@
 @import "tailwindcss";
 
 .search-form {
-    margin-left: auto;
-    margin-right: auto;
-    width: "100%"
+  margin-left: auto;
+  margin-right: auto;
+  width: "100%";
 }
 
 .avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-  }
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
 
+.logo {
+  width: 40px;
+  height: 40px;
+}
