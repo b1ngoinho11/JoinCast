@@ -13,12 +13,20 @@ import "../css/NavBar.css";
 
 function NavbarDefault() {
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
 
   const handleSearch = (e) => {
     e.preventDefault();
     alert(`Searching for ${searchQuery}`);
   };
 
+  const handleLogin = () => {
+    setIsLoggedIn(true);
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+  };
   return (
     <Navbar
       bg="light"
@@ -58,11 +66,11 @@ function NavbarDefault() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-          <Button 
-          variant="link" 
-          style={{ minWidth: "40px" }}
-          type="submit"
-          onClick={handleSearch}
+          <Button
+            variant="link"
+            style={{ minWidth: "40px" }}
+            type="submit"
+            onClick={handleSearch}
           >
             <BsSearch size={20} color="345766" />
           </Button>
@@ -73,16 +81,28 @@ function NavbarDefault() {
           className="d-flex align-items-center"
           style={{ width: "250px", justifyContent: "flex-end" }}
         >
-          <Nav.Link href="#notifications" className="me-3">
-            <BsBell size={20} />
-          </Nav.Link>
-          <Nav.Link href="#profile">
-            <img
-              src="https://static.wikia.nocookie.net/attack-vampire/images/1/18/Eren_Jaeger.png/revision/latest/scale-to-width-down/215?cb=20190722000208"
-              className="rounded-circle avatar"
-              alt="Avatar"
-            />
-          </Nav.Link>
+          {isLoggedIn ? (
+            <>
+              <Nav.Link href="#notifications" className="me-3">
+                <BsBell size={20} />
+              </Nav.Link>
+              <Nav.Link href="#profile" onClick={handleLogout}>
+                <img
+                  src="https://static1.srcdn.com/wordpress/wp-content/uploads/2024/04/img_0313.jpeg"
+                  className="rounded-circle avatar"
+                  alt="Avatar"
+                />
+              </Nav.Link>
+            </>
+          ) : (
+            <Button
+              variant="outline-primary"
+              onClick={handleLogin}
+              className="ms-2"
+            >
+              Sign In
+            </Button>
+          )}
         </div>
       </Container>
     </Navbar>
