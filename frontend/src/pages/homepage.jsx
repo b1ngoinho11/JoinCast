@@ -5,9 +5,11 @@ import PodcastCard from "../components/PodcastCard";
 import "../css/HomePage.css";
 
 const HomePage = () => {
-  const scrollContainerRef = useRef(null);
+  const nowLivePodcastScroll = useRef(null);
+  const trendingPodcastScroll = useRef(null);
   const podcasts = [
     {
+      id: 1,
       title: "Daily Talk Ep.123",
       genre: "Technology",
       imageUrl:
@@ -15,6 +17,7 @@ const HomePage = () => {
       timeAgo: "2 hrs ago",
     },
     {
+      id: 2,
       title: "Business Weekly Ep.45",
       genre: "Business",
       imageUrl:
@@ -22,6 +25,7 @@ const HomePage = () => {
       timeAgo: "1 day ago",
     },
     {
+      id: 3,
       title: "Health Matters Ep.12",
       genre: "Health",
       imageUrl:
@@ -29,6 +33,7 @@ const HomePage = () => {
       timeAgo: "1 week ago",
     },
     {
+      id: 4,
       title: "Daily Talk Ep.123",
       genre: "Technology",
       imageUrl:
@@ -36,6 +41,7 @@ const HomePage = () => {
       timeAgo: "2 hrs ago",
     },
     {
+      id: 5,
       title: "Business Weekly Ep.45",
       genre: "Business",
       imageUrl:
@@ -43,6 +49,7 @@ const HomePage = () => {
       timeAgo: "1 day ago",
     },
     {
+      id: 6,
       title: "Health Matters Ep.12",
       genre: "Health",
       imageUrl:
@@ -55,11 +62,11 @@ const HomePage = () => {
     name: "John Doe",
     imageUrl:
       "https://static1.srcdn.com/wordpress/wp-content/uploads/2024/04/img_0313.jpeg", // replace with actual image
-    };
+  };
 
-  const handleScroll = (scrollOffset) => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollLeft += scrollOffset;
+  const handleScroll = (scrollRef, scrollOffset) => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollLeft += scrollOffset;
     }
   };
 
@@ -67,27 +74,48 @@ const HomePage = () => {
     <div>
       <Container>
         <h2 className="my-4">Categories</h2>
-        <Row>
-          <Col xs={12} sm={6} md={4}>
-            <h3>Technology</h3>
-          </Col>
-          <Col xs={12} sm={6} md={4}>
-            <h3>Business</h3>
-          </Col>
-          <Col xs={12} sm={6} md={4}>
-            <h3>Health</h3>
-          </Col>
-        </Row>
+        <div className="position-relative">
+          <Row
+            className="category-row justify-content-center flex-nowrap"
+            style={{ gap: "0.5rem", overflow: "visible" }}
+          >
+            <Col xs="auto">
+              <Button variant="dark" className="category-button">
+                Technology
+              </Button>
+            </Col>
+            <Col xs="auto">
+              <Button variant="dark" className="category-button">
+                Business
+              </Button>
+            </Col>
+            <Col xs="auto">
+              <Button variant="dark" className="category-button">
+                Health
+              </Button>
+            </Col>
+            <Col xs="auto">
+              <Button variant="dark" className="category-button">
+                Entertainment
+              </Button>
+            </Col>
+            <Col xs="auto">
+              <Button variant="dark" className="category-button">
+                Education
+              </Button>
+            </Col>
+          </Row>
+        </div>
 
         <h2 className="my-4 text-left">Now Live</h2>
         <div className="position-relative">
           <Row
-            ref={scrollContainerRef}
+            ref={nowLivePodcastScroll}
             className="my-4 card-row flex-nowrap scroll-hide"
           >
-            {podcasts.map((podcast, index) => (
+            {podcasts.map((podcast) => (
               <Col
-                key={index}
+                key={podcast.id} // Changed from index to podcast.id
                 className="flex-shrink-0"
                 style={{ minWidth: "300px" }}
               >
@@ -99,20 +127,59 @@ const HomePage = () => {
           <Button
             variant="dark"
             className="scroll-button left"
-            onClick={() => handleScroll(-400)}
+            onClick={() => handleScroll(nowLivePodcastScroll, -400)}
           >
-            <IoIosArrowBack style={{background: 'transparent'}}/>
+            <IoIosArrowBack
+              style={{ background: "transparent", color: "black" }}
+            />
           </Button>
           <Button
             variant="dark"
             className="scroll-button right"
-            onClick={() => handleScroll(400)}
+            onClick={() => handleScroll(nowLivePodcastScroll, 400)}
           >
-            <IoIosArrowForward style={{background: 'transparent'}}/>
+            <IoIosArrowForward
+              style={{ background: "transparent", color: "black" }}
+            />
           </Button>
         </div>
 
         <h2 className="my-4 text-left">Trending</h2>
+        <div className="position-relative">
+          <Row
+            ref={trendingPodcastScroll}
+            className="my-4 card-row flex-nowrap scroll-hide"
+          >
+            {podcasts.map((podcast) => (
+              <Col
+                key={podcast.id} // Changed from index to podcast.id
+                className="flex-shrink-0"
+                style={{ minWidth: "300px" }}
+              >
+                <PodcastCard podcast={podcast} user={user} />
+              </Col>
+            ))}
+          </Row>
+
+          <Button
+            variant="dark"
+            className="scroll-button left"
+            onClick={() => handleScroll(trendingPodcastScroll, -400)}
+          >
+            <IoIosArrowBack
+              style={{ background: "transparent", color: "black" }}
+            />
+          </Button>
+          <Button
+            variant="dark"
+            className="scroll-button right"
+            onClick={() => handleScroll(trendingPodcastScroll, 400)}
+          >
+            <IoIosArrowForward
+              style={{ background: "transparent", color: "black" }}
+            />
+          </Button>
+        </div>
       </Container>
     </div>
   );

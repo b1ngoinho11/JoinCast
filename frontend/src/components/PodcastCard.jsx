@@ -1,8 +1,10 @@
 import React from "react";
 import "../css/PodcastCard.css";
+import { Link } from "react-router-dom";
 
 const PodcastCard = ({ podcast, user }) => {
   return (
+    <Link to={`/podcast/${podcast.id}`} className="card-link">
     <div className="cardBox">
       <img
         src={podcast.imageUrl}
@@ -21,6 +23,7 @@ const PodcastCard = ({ podcast, user }) => {
         </div>
       </div>
     </div>
+    </Link>
   );
 };
 

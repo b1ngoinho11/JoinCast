@@ -10,6 +10,7 @@ import {
 import { BsSearch, BsBell } from "react-icons/bs";
 import logo from "../assets/logo.png";
 import "../css/NavBar.css";
+import { Link } from "react-router-dom";
 
 function NavbarDefault() {
   const [searchQuery, setSearchQuery] = React.useState("");
@@ -39,7 +40,7 @@ function NavbarDefault() {
       <Container>
         {/* Left Section */}
         <div className="d-flex align-items-center" style={{ width: "250px" }}>
-          <Navbar.Brand href="#" className="me-3">
+          <Navbar.Brand href="/" className="me-3">
             <img
               src={logo}
               className="d-inline-block align-top logo"

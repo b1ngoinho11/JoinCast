@@ -43,3 +43,37 @@
 .btn {
     background: transparent;
 }
+
+.category-button {
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--color-text);
+    background-color: var(--color-primary);
+    border: 1px solid;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+    width: 200px;
+
+}
+
+.category-row {
+    flex-wrap: nowrap !important;
+    overflow-x: visible !important;
+    padding: 0.2rem 0;
+    margin: 0 -0.25rem;
+  }
+
+.card-link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+  }
+  
+  .card-link:hover {
+    text-decoration: none;
+    color: inherit;
+  }
