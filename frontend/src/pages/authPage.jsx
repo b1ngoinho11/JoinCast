@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Container, Row, Col, Form, Button, Card } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
+import '../css/auth.css';
+import background from '../assets/background.png'
 
 export function LoginPage() {
   const [username, setUsername] = useState('');
@@ -15,12 +17,12 @@ export function LoginPage() {
   };
 
   return (
-    <Container className="mt-5">
-      <Row className="justify-content-center">
+    <Container className=" background" fluid >
+      <Row className="justify-content-center" style={{background: 'transparent'}}>
         <Col md={6} lg={4}>
-          <Card className="p-4">
-            <h2 className="text-center mb-4">Login</h2>
-            <Form onSubmit={handleSubmit}>
+          <Card className="p-4" style={{ marginTop: "20%", background: 'rgba(255, 255, 255, 0.5)'}}>
+            <h2 className="text-center mb-4" style={{background:'transparent'}}>Login</h2>
+            <Form onSubmit={handleSubmit} >
               <Form.Group className="mb-3" controlId="formUsername">
                 <Form.Label>Username</Form.Label>
                 <Form.Control
@@ -77,10 +79,10 @@ export function SignupPage() {
   };
 
   return (
-    <Container className="mt-5">
-      <Row className="justify-content-center">
+    <Container className="background" fluid>
+      <Row className="justify-content-center" style={{background: 'transparent'}}>
         <Col md={6} lg={4}>
-          <Card className="p-4">
+          <Card className="p-4" style={{marginTop: "20%", background: 'rgba(255, 255, 255, 0.5)'}}>
             <h2 className="text-center mb-4">Sign Up</h2>
             <Form onSubmit={handleSubmit}>
               <Form.Group className='mb-3' controlId='formUsername'>

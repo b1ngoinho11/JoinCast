@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect, use } from "react";
 import { Container, Row, Col, Button } from "react-bootstrap";
 import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
 import PodcastCard from "../components/PodcastCard";
@@ -7,6 +7,10 @@ import "../css/HomePage.css";
 const HomePage = () => {
   const nowLivePodcastScroll = useRef(null);
   const trendingPodcastScroll = useRef(null);
+  const [leftLiveScroll, setLeftLiveScroll] = useState(false);
+  const [leftTrendingScroll, setLeftTrendingScroll] = useState(false);
+  const [rightLiveScroll, setRightLiveScroll] = useState(true);
+  const [rightTrendingScroll, setRightTrendingScroll] = useState(true);
   const podcasts = [
     {
       id: 1,
@@ -70,9 +74,30 @@ const HomePage = () => {
     }
   };
 
+  const updatVisibility = (scrollRef) => {
+    if (!scrollRef.current) return;
+    const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+  
+    if (scrollRef === nowLivePodcastScroll) {
+      setLeftLiveScroll(scrollLeft > 0);
+      setRightLiveScroll(scrollLeft < scrollWidth - clientWidth);
+    }
+
+    if (scrollRef === trendingPodcastScroll) {
+      setLeftTrendingScroll(scrollLeft > 0);
+      setRightTrendingScroll(scrollLeft < scrollWidth - clientWidth);
+    }
+  };
+
+  useEffect(() => {
+      updatVisibility(nowLivePodcastScroll);
+      updatVisibility(trendingPodcastScroll);
+    }, []);
+   
+
   return (
     <div>
-      <Container>
+      <Container style={{ maxWidth: "90%", padding: "0", }}>
         <h2 className="my-4">Categories</h2>
         <div className="position-relative">
           <Row
@@ -112,6 +137,7 @@ const HomePage = () => {
           <Row
             ref={nowLivePodcastScroll}
             className="my-4 card-row flex-nowrap scroll-hide"
+            onScroll={() => updatVisibility(nowLivePodcastScroll)}
           >
             {podcasts.map((podcast) => (
               <Col
@@ -149,6 +175,7 @@ const HomePage = () => {
           <Row
             ref={trendingPodcastScroll}
             className="my-4 card-row flex-nowrap scroll-hide"
+            onScroll={() => updatVisibility(trendingPodcastScroll)}
           >
             {podcasts.map((podcast) => (
               <Col

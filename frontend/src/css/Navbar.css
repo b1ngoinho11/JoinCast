@@ -16,17 +16,3 @@
   height: 40px;
   object-fit: cover;
 }
-
-.navbar-custom {
-  height: 80px; /* Adjust height as needed */
-  padding: 0.5rem 0;
-  position: relative; /* Ensure positioning for the shadow */
-  z-index: 1; /* Ensure it stays above other elements */
-}
-
-.navbar-menu {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Shadow around the menu */
-  background-color: white; /* Ensure background color matches the navbar */
-  border-radius: 0.25rem; /* Optional: add some rounding to the corners */
-  margin-top: 0.5rem; /* Space between the navbar and the menu shadow */
-}

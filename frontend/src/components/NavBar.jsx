@@ -37,7 +37,7 @@ function NavbarDefault() {
         boxShadow: "0 2px 4px 0 rgba(0,0,0,0.1)",
       }}
     >
-      <Container>
+      <Container style={{marginTop: "10px"}} fluid>
         {/* Left Section */}
         <div className="d-flex align-items-center" style={{ width: "250px" }}>
           <Navbar.Brand href="/" className="me-3">
@@ -98,7 +98,7 @@ function NavbarDefault() {
           ) : (
             <Button
               variant="outline-primary"
-              onClick={handleLogin}
+              href="/login"
               className="ms-2"
             >
               Sign In
