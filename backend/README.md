@@ -49,3 +49,9 @@ to delete the table
 ```
 drop table users;
 ```
+
+
+# to run test
+```
+pytest backend/tests/ --verbose
+```

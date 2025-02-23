@@ -26,11 +26,13 @@ class UserRepository(BaseRepository[User]):
     
 
     def delete(self, db: Session, *, id: str) -> User:
-        db_obj = db.query(User).get(id)
+        db_obj = db.get(User, id)
+        if db_obj is None:
+            # Handle the case where the user does not exist
+            raise ValueError(f"User with id {id} does not exist.")
         db.delete(db_obj)
         db.commit()
         return db_obj
-        
 
 # Initialize the repository
 user_repository = UserRepository(User)

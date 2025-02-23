@@ -1,6 +1,5 @@
-# app/schemas/user.py
 from typing import Optional
-from pydantic import BaseModel, EmailStr, validator
+from pydantic import BaseModel, EmailStr, field_validator, ConfigDict
 import uuid
 from datetime import datetime
 
@@ -17,13 +16,13 @@ class UserCreate(UserBase):
     username: str
     password: str
     
-    @validator('username')
+    @field_validator('username')
     def username_alphanumeric(cls, v):
         if not v.isalnum():
             raise ValueError('Username must be alphanumeric')
         return v
     
-    @validator('password')
+    @field_validator('password')
     def password_min_length(cls, v):
         if len(v) < 8:
             raise ValueError('Password must be at least 8 characters')
@@ -39,8 +38,7 @@ class UserInDBBase(UserBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Properties to return via API
 class UserResponse(UserInDBBase):

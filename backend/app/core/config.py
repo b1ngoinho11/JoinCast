@@ -1,8 +1,12 @@
 import os
-from pydantic import PostgresDsn, validator, AnyHttpUrl
+from pydantic import PostgresDsn, field_validator, AnyHttpUrl
 from pydantic_settings import BaseSettings
 from typing import List, Optional
 from functools import lru_cache
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Your Project Name"
@@ -14,12 +18,16 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str
     POSTGRES_DB: str
     POSTGRES_PORT: str = "5432"
-    DATABASE_URI: PostgresDsn = None
+    DATABASE_URI: PostgresDsn | None = None
 
-    @validator("DATABASE_URI", pre=True)
-    def assemble_db_connection(cls, v, values):
+    @field_validator("DATABASE_URI", mode="before")
+    @classmethod
+    def assemble_db_connection(cls, v: Optional[str], info) -> str:
         if isinstance(v, str):
             return v
+            
+        # Get values from the validation context
+        values = info.data
 
         # Manually construct the DSN string
         return f"postgresql://{values.get('POSTGRES_USER')}:{values.get('POSTGRES_PASSWORD')}@" \
@@ -43,9 +51,9 @@ class Settings(BaseSettings):
     # BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
 
     
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
+    # class Config:
+    #     env_file = ".env"
+    #     case_sensitive = True
 
 @lru_cache()
 def get_settings():

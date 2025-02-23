@@ -11,6 +11,27 @@ from sqlalchemy import inspect, text
 from app.db.session import engine, SessionLocal
 from app.models.user import User
 
+def test_db_connection():
+    """Test if the database connection works"""
+    with engine.connect() as connection:
+        result = connection.execute(text("SELECT 1"))
+        assert result.scalar() == 1, "Database connection failed"
+
+def test_list_tables():
+    """Ensure tables are present in the database"""
+    inspector = inspect(engine)
+    tables = inspector.get_table_names()
+    assert len(tables) > 0, "No tables found in the database"
+
+def test_user_table():
+    """Check user table for existence and user count"""
+    db = SessionLocal()
+    try:
+        user_count = db.query(User).count()
+        assert isinstance(user_count, int), "User count should be an integer"
+    finally:
+        db.close()
+
 def check_db_connection():
     """Test basic database connection"""
     try:
