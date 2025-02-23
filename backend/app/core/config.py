@@ -1,0 +1,55 @@
+import os
+from pydantic import PostgresDsn, validator, AnyHttpUrl
+from pydantic_settings import BaseSettings
+from typing import List, Optional
+from functools import lru_cache
+
+class Settings(BaseSettings):
+    PROJECT_NAME: str = "Your Project Name"
+    API_V1_STR: str = "/api/v1"
+    
+    # Database settings
+    POSTGRES_SERVER: str
+    POSTGRES_USER: str
+    POSTGRES_PASSWORD: str
+    POSTGRES_DB: str
+    POSTGRES_PORT: str = "5432"
+    DATABASE_URI: PostgresDsn = None
+
+    @validator("DATABASE_URI", pre=True)
+    def assemble_db_connection(cls, v, values):
+        if isinstance(v, str):
+            return v
+
+        # Manually construct the DSN string
+        return f"postgresql://{values.get('POSTGRES_USER')}:{values.get('POSTGRES_PASSWORD')}@" \
+               f"{values.get('POSTGRES_SERVER')}:{values.get('POSTGRES_PORT')}/" \
+               f"{values.get('POSTGRES_DB')}"
+    
+    # # OAuth settings
+    # OAUTH_PROVIDERS: List[str] = ["google"]  # Add more providers as needed
+    
+    # # Google OAuth
+    # GOOGLE_CLIENT_ID: str
+    # GOOGLE_CLIENT_SECRET: str
+    # GOOGLE_REDIRECT_URI: str
+    
+    # # JWT settings for session management
+    # JWT_SECRET_KEY: str
+    # JWT_ALGORITHM: str = "HS256"
+    # ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    
+    # # CORS settings
+    # BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
+
+    
+    class Config:
+        env_file = ".env"
+        case_sensitive = True
+
+@lru_cache()
+def get_settings():
+    return Settings()
+
+# Initialize settings
+settings = Settings()

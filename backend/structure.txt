@@ -1,0 +1,79 @@
+backend/
+│
+├── alembic/                    # Database migration tool
+│   └── versions/               # Migration scripts
+│
+├── app/
+│   ├── __init__.py
+│   ├── main.py                 # FastAPI application entry point
+│   │
+│   ├── api/                    # API routes
+│   │   ├── __init__.py
+│   │   ├── dependencies.py     # FastAPI dependencies
+│   │   ├── user_routes.py
+│   │   ├── room_routes.py
+│   │   ├── podcast_routes.py
+│   │   └── websocket_routes.py # Real-time communication
+│   │
+│   ├── core/                   # Core application components
+│   │   ├── __init__.py
+│   │   ├── config.py           # App configuration
+│   │   ├── security.py         # Authentication & authorization
+│   │   └── events.py           # Event bus for real-time updates
+│   │
+│   ├── db/                     # Database related code
+│   │   ├── __init__.py
+│   │   ├── session.py          # Database session management
+│   │   └── base.py             # Base model class
+│   │
+│   ├── models/                 # SQLAlchemy ORM models
+│   │   ├── __init__.py
+│   │   ├── user.py
+│   │   ├── room.py
+│   │   ├── podcast.py
+│   │   └── episode.py
+│   │
+│   ├── schemas/                # Pydantic schemas for requests/responses
+│   │   ├── __init__.py
+│   │   ├── user.py
+│   │   ├── room.py
+│   │   ├── podcast.py
+│   │   └── episode.py
+│   │
+│   ├── domain/                 # Domain models & business logic
+│   │   ├── __init__.py
+│   │   ├── user.py             # User domain model
+│   │   ├── role.py             # Role classes with state pattern
+│   │   ├── room.py             # Room domain model
+│   │   └── podcast.py          # Podcast domain model
+│   │
+│   ├── repositories/           # Repository pattern implementation
+│   │   ├── __init__.py
+│   │   ├── base.py             # Base repository class
+│   │   ├── user_repository.py
+│   │   ├── room_repository.py
+│   │   └── podcast_repository.py
+│   │
+│   ├── services/               # Business logic services
+│   │   ├── __init__.py
+│   │   ├── user_service.py
+│   │   ├── room_service.py
+│   │   └── podcast_service.py
+│   │
+│   └── utils/                  # Utility functions
+│       ├── __init__.py
+│       └── id_generator.py     # ID generation helpers
+│
+├── tests/                      # Tests
+│   ├── __init__.py
+│   ├── conftest.py             # Fixtures for testing
+│   ├── test_api/               # API tests
+│   ├── test_services/          # Service tests
+│   └── test_repositories/      # Repository tests
+│
+├── .env                        # Environment variables
+├── .env.example                # Example environment file
+├── .gitignore
+├── alembic.ini                 # Alembic configuration
+├── pyproject.toml              # Project dependencies (Poetry)
+├── Dockerfile                  # Docker configuration
