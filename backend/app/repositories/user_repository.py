@@ -16,8 +16,8 @@ class UserRepository(BaseRepository[User]):
         db_obj = User(
             email=obj_in.email,
             username=obj_in.username,
-            hashed_password=hashed_password,
-            is_superuser=obj_in.is_superuser
+            password=hashed_password,
+            # is_superuser=obj_in.is_superuser
         )
         db.add(db_obj)
         db.commit()

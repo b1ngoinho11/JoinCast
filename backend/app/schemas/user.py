@@ -7,8 +7,6 @@ from datetime import datetime
 class UserBase(BaseModel):
     email: Optional[EmailStr] = None
     username: Optional[str] = None
-    is_active: Optional[bool] = True
-    is_superuser: bool = False
 
 # Properties to receive via API on creation
 class UserCreate(UserBase):
@@ -46,4 +44,4 @@ class UserResponse(UserInDBBase):
 
 # Properties stored in DB
 class UserInDB(UserInDBBase):
-    hashed_password: str
+    password: str

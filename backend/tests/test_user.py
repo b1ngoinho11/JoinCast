@@ -78,7 +78,7 @@ def create_user():
             email="panda@tidmee.com",
             username="panda",
             password="password",
-            is_superuser=False
+            # is_superuser=False
         )
         
         # Hash the password
@@ -114,10 +114,9 @@ def list_all_users():
             print(f"ID: {user.id}")
             print(f"Username: {user.username}")
             print(f"Email: {user.email}")
-            print(f"Hashed Password: {user.hashed_password}")
-            print(f"Active: {user.is_active}")
-            print(f"Superuser: {user.is_superuser}")
+            print(f"Password: {user.password}")
             print(f"Created: {user.created_at}")
+            print(f"Updated: {user.updated_at}")
             print("-" * 30)
             
     finally:
@@ -165,18 +164,18 @@ def delete_all_user():
 if __name__ == "__main__":
     
     # # delete all user
-    # delete_all_user()
+    delete_all_user()
     
     # Create a test user
-    create_user()
+    user = create_user()
     
-    # List all users in the database
+    # # List all users in the database
     list_all_users()
     
-    wish_to_delete = input("Do you want to delete a user? (y/n): ")
-    if wish_to_delete.lower() == "y":
-        user_id = str(input("Enter the user ID to delete: "))
-        delete_user(user_id)
-        list_all_users()
-    
-    
+    # # wish_to_delete = input("Do you want to delete a user? (y/n): ")
+    # # if wish_to_delete.lower() == "y":
+    # #     user_id = str(input("Enter the user ID to delete: "))
+    # #     delete_user(user_id)
+    # #     list_all_users()
+    delete_user(user.id)
+

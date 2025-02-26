@@ -1,4 +1,4 @@
-# app/main.py
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -25,12 +25,28 @@ def create_tables():
         print(f"❌ Error creating database tables: {e}")
         raise e
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Lifespan event handler for FastAPI application
+    Replaces the deprecated on_event("startup") approach
+    """
+    # Startup code: create database tables
+    create_tables()
+    
+    yield
+    
+    # Shutdown code (if any)
+    # This executes when the application is shutting down
+    pass
+
 def get_application():
     """Create and configure the FastAPI application"""
     _app = FastAPI(
         title="Podcast Streaming API",
         description="API for podcast streaming application with live rooms",
-        version="1.0.0"
+        version="1.0.0",
+        lifespan=lifespan  # Use the lifespan context manager
     )
 
     # Configure CORS
@@ -52,10 +68,6 @@ def get_application():
     # _app.include_router(room_routes.router, prefix="/api/v1/rooms", tags=["rooms"])
     # _app.include_router(podcast_routes.router, prefix="/api/v1/podcasts", tags=["podcasts"])
     # _app.include_router(websocket_routes.router, tags=["websocket"])
-
-    @_app.on_event("startup")
-    async def startup_event():
-        create_tables()
 
     return _app
 
