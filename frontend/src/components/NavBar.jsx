@@ -47,7 +47,7 @@ function NavbarDefault() {
       style={{
         height: "80px",
         padding: "0.5rem 0",
-        boxShadow: "0 2px 4px 0 rgba(0,0,0,0.1)",
+        boxShadow: "0 2px 0 0 rgba(0,0,0,0.1)",
       }}
     >
       <Container style={{ marginTop: "10px", maxWidth: "92%" }} fluid>
@@ -61,10 +61,10 @@ function NavbarDefault() {
             />
           </Navbar.Brand>
           <Nav className="align-items-center">
-            <Nav.Link href="#following" className="px-2">
+            <Nav.Link href="/following" className="px-2">
               Following
             </Nav.Link>
-            <Nav.Link href="#explore" className="px-2">
+            <Nav.Link href="/" className="px-2">
               Explore
             </Nav.Link>
           </Nav>
@@ -111,11 +111,15 @@ function NavbarDefault() {
                 </Dropdown.Toggle>
 
                 <Dropdown.Menu className="shadow-sm">
-                  <Dropdown.Item href="#account" className="py-2">
+                  <Dropdown.Item href="/myaccount" className="py-2">
                     Account
                   </Dropdown.Item>
                   <Dropdown.Divider />
-                  <Dropdown.Item onClick={logout} className="py-2 text-danger">
+                  <Dropdown.Item href="#settings" className="py-2">
+                    Settings
+                  </Dropdown.Item>
+                  <Dropdown.Divider />
+                  <Dropdown.Item onClick={logout} className="py-2 text-danger" href="/">
                     Sign Out
                   </Dropdown.Item>
                 </Dropdown.Menu>

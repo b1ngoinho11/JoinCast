@@ -1,0 +1,22 @@
+.sidebarLink {
+  color: #000;
+  text-decoration: none;
+  font-size: 1.2rem;
+  padding: 20px 10px;
+  display: block;
+  transition: 0.3s;
+}
+
+.sidebarLink.active {
+  font-size: 1.5rem; /* Increase the font size for the active link */
+  font-weight: bold; /* Optional: make it bold */
+}
+
+.customSidebar {
+  overflow: "hidden";
+  transition: "width 0.3s";
+  display: "flex";
+  position: "relative";
+  border-right: solid 1px #d9d0ca;
+  border-radius: 20px;
+}
