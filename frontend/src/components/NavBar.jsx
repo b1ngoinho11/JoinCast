@@ -6,28 +6,41 @@ import {
   FormControl,
   Button,
   Container,
+  Dropdown,
 } from "react-bootstrap";
 import { BsSearch, BsBell } from "react-icons/bs";
 import logo from "../assets/logo.png";
 import "../css/NavBar.css";
-import { Link } from "react-router-dom";
+import { AuthContext } from "../contexts/authContext";
 
 function NavbarDefault() {
   const [searchQuery, setSearchQuery] = React.useState("");
-  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+  const { isLoggedIn, logout } = React.useContext(AuthContext);
 
   const handleSearch = (e) => {
     e.preventDefault();
     alert(`Searching for ${searchQuery}`);
   };
 
-  const handleLogin = () => {
-    setIsLoggedIn(true);
-  };
+  const CustomToggle = React.forwardRef(({ children, onClick }, ref) => (
+    <a
+      href="#profile"
+      ref={ref}
+      onClick={(e) => {
+        e.preventDefault();
+        onClick(e);
+      }}
+      style={{
+        cursor: "pointer",
+        padding: 0,
+        background: "none",
+        border: "none",
+      }}
+    >
+      {children}
+    </a>
+  ));
 
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-  };
   return (
     <Navbar
       expand="lg"
@@ -37,7 +50,7 @@ function NavbarDefault() {
         boxShadow: "0 2px 4px 0 rgba(0,0,0,0.1)",
       }}
     >
-      <Container style={{marginTop: "10px"}} fluid>
+      <Container style={{ marginTop: "10px", maxWidth: "92%" }} fluid>
         {/* Left Section */}
         <div className="d-flex align-items-center" style={{ width: "250px" }}>
           <Navbar.Brand href="/" className="me-3">
@@ -87,20 +100,29 @@ function NavbarDefault() {
               <Nav.Link href="#notifications" className="me-3">
                 <BsBell size={20} />
               </Nav.Link>
-              <Nav.Link href="#profile" onClick={handleLogout}>
-                <img
-                  src="https://static1.srcdn.com/wordpress/wp-content/uploads/2024/04/img_0313.jpeg"
-                  className="rounded-circle avatar"
-                  alt="Avatar"
-                />
-              </Nav.Link>
+
+              <Dropdown align="end">
+                <Dropdown.Toggle as={CustomToggle}>
+                  <img
+                    src="https://static1.srcdn.com/wordpress/wp-content/uploads/2024/04/img_0313.jpeg"
+                    className="rounded-circle avatar"
+                    alt="Avatar"
+                  />
+                </Dropdown.Toggle>
+
+                <Dropdown.Menu className="shadow-sm">
+                  <Dropdown.Item href="#account" className="py-2">
+                    Account
+                  </Dropdown.Item>
+                  <Dropdown.Divider />
+                  <Dropdown.Item onClick={logout} className="py-2 text-danger">
+                    Sign Out
+                  </Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown>
             </>
           ) : (
-            <Button
-              variant="outline-primary"
-              href="/login"
-              className="ms-2"
-            >
+            <Button variant="outline-primary" href="/login" className="ms-2">
               Sign In
             </Button>
           )}

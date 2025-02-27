@@ -1,11 +1,11 @@
-// src/components/Layout.js
+import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import NavbarDefault from '../components/NavBar';
 
 const Layout = () => {
   return (
     <>
-      <NavbarDefault />
+      <NavbarDefault/>
       <Outlet />
     </>
   );

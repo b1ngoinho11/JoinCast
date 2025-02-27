@@ -2,17 +2,18 @@ import React, { useState } from 'react';
 import { Container, Row, Col, Form, Button, Card } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import '../css/auth.css';
-import background from '../assets/background.png'
+import { AuthContext } from '../contexts/authContext';
+import Cookies from 'js-cookie';
 
 export function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
+  const { login } = React.useContext(AuthContext);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Add your login logic here
-    alert('Login functionality to be implemented');
+    login(true);
     navigate('/');
   };
 
