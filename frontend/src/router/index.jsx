@@ -27,8 +27,7 @@ const AuthLoader = () => {
 
 const router = createBrowserRouter([
   {
-    path: "/",
-    element: <Layout />,
+    element: <Layout withSidebar={false} />,
     children: [
       {
         path: "/",
@@ -42,11 +41,16 @@ const router = createBrowserRouter([
         path: "/following",
         element: <FollowingPage />,
       },
+    ],
+  },
+  {
+    element: <Layout withSidebar={true} />,
+    children: [
       {
         path: "/myaccount",
         element: <AccountPage />,
         loader: ProtectedLoader,
-      }
+      },
     ],
   },
   {

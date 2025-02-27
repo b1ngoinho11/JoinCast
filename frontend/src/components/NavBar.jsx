@@ -52,7 +52,7 @@ function NavbarDefault() {
     >
       <Container style={{ marginTop: "10px", maxWidth: "92%" }} fluid>
         {/* Left Section */}
-        <div className="d-flex align-items-center" style={{ width: "250px" }}>
+        <div className="d-flex align-items-center" style={{ maxWidth: "250px" }}>
           <Navbar.Brand href="/" className="me-3">
             <img
               src={logo}

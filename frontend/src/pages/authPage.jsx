@@ -3,7 +3,6 @@ import { Container, Row, Col, Form, Button, Card } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import '../css/auth.css';
 import { AuthContext } from '../contexts/authContext';
-import Cookies from 'js-cookie';
 
 export function LoginPage() {
   const [username, setUsername] = useState('');
