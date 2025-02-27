@@ -7,6 +7,7 @@ import Layout from "../layouts/layout";
 import FollowingPage from "../pages/followingPage";
 import AccountPage from "../pages/accountPage";
 import Cookies from "js-cookie";
+import AnalyticsPage from "../pages/analyticsPage";
 
 const ProtectedLoader = () => {
   const token = Cookies.get("auth_token");
@@ -51,6 +52,11 @@ const router = createBrowserRouter([
         element: <AccountPage />,
         loader: ProtectedLoader,
       },
+      {
+        path: "analytics",
+        element: <AnalyticsPage />,
+        loader: ProtectedLoader,
+      }
     ],
   },
   {
