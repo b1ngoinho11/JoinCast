@@ -119,14 +119,28 @@ const AccountPage = () => {
                 {successMessage && <Alert variant="success">{successMessage}</Alert>}
 
                 <Form onSubmit={handleSubmit} style={{ padding: '0px 150px'}}>
-                    {/* Profile Image Upload */}
-                    <Form.Group className="mb-4 text-center">
+                {/* Profile Image Upload - Centered Section */}
+                <div className="d-flex flex-column align-items-center mb-4">
+                    <div style={{ 
+                        width: "170px", 
+                        height: "170px", 
+                        borderRadius: "50%",
+                        overflow: "hidden",
+                        border: "2px solid #ccc",
+                        marginBottom: "1rem"
+                    }}>
                         <Image 
-                            src={previewImage}
-                            roundedCircle 
-                            style={{ width: "150px", height: "150px", objectFit: "cover" }}
+                            src={previewImage || "/default-avatar.png"}
+                            style={{ 
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover" 
+                            }}
                         />
-                        <Form.Label className="d-block mt-3">
+                    </div>
+                    
+                    <Form.Group className="text-center">
+                        <Form.Label className="d-block">
                             Change Profile Picture
                             <Form.Control
                                 type="file"
@@ -137,12 +151,12 @@ const AccountPage = () => {
                         </Form.Label>
                         <Button 
                             variant="outline-secondary" 
-                            // accept only image files
                             onClick={() => document.querySelector('input[type="file"]').click()}
                         >
                             Upload New Photo
                         </Button>
                     </Form.Group>
+                </div>
 
                     {/* Username */}
                     <Form.Group className="mb-3">
