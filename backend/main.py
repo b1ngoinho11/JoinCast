@@ -3,6 +3,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 
 from app.api import user_routes, show_routes, episode_routes, auth_routes
 from app.core.config import settings
@@ -74,6 +76,7 @@ def get_application():
     return _app
 
 app = get_application()
+# app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

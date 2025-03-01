@@ -12,6 +12,7 @@ class User(BaseModel):
     email = Column(String, unique=True, index=True, nullable=False)
     username = Column(String, unique=True, index=True, nullable=False)
     password = Column(String, nullable=False)
+    profile_picture = Column(String, nullable=True)  # Store the file path/URL
     
     # Relationships
     shows = relationship("Show", back_populates="creator")

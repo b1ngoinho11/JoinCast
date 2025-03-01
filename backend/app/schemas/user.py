@@ -7,6 +7,7 @@ from datetime import datetime
 class UserBase(BaseModel):
     email: Optional[EmailStr] = None
     username: Optional[str] = None
+    profile_picture: Optional[str] = None
 
 # Properties to receive via API on creation
 class UserCreate(UserBase):
@@ -45,3 +46,7 @@ class UserResponse(UserInDBBase):
 # Properties stored in DB
 class UserInDB(UserInDBBase):
     password: str
+
+class ProfilePictureResponse(BaseModel):
+    profile_picture: Optional[str] = None
+    message: str

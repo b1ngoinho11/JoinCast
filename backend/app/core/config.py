@@ -4,6 +4,7 @@ from pydantic_settings import BaseSettings
 from typing import List, Optional
 from functools import lru_cache
 from dotenv import load_dotenv
+from pathlib import Path
 
 # Load environment variables from .env file
 load_dotenv()
@@ -45,7 +46,7 @@ class Settings(BaseSettings):
     # JWT settings for session management
     JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "your-secret-key-here")
     JWT_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 # 24 hours
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     
     # Security settings
@@ -54,6 +55,12 @@ class Settings(BaseSettings):
     
     # CORS settings
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
+    
+    # File upload settings
+    UPLOAD_DIR: Path = Path("uploads")
+    DEFAULT_PROFILE_PICS_DIR: Path = Path("static/default_profile_pics")
+    MAX_PROFILE_PICTURE_SIZE: int = 10 * 1024 * 1024  # 10MB
+    ALLOWED_PROFILE_PICTURE_TYPES: List[str] = ["image/jpeg", "image/png", "image/gif"]
     
     class Config:
         env_file = ".env"

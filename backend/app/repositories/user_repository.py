@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.models.user import User
 from app.repositories.base import BaseRepository
 from app.schemas.user import UserCreate, UserUpdate
+from app.utils.profile_pictures import get_random_default_picture
 
 class UserRepository(BaseRepository[User]):
     def get_by_email(self, db: Session, *, email: str) -> Optional[User]:
@@ -13,11 +14,14 @@ class UserRepository(BaseRepository[User]):
         return db.query(User).filter(User.username == username).first()
 
     def create(self, db: Session, *, obj_in: UserCreate, hashed_password: str) -> User:
+        # Get random default profile picture
+        default_profile_pic = get_random_default_picture()
+        
         db_obj = User(
             email=obj_in.email,
             username=obj_in.username,
             password=hashed_password,
-            # is_superuser=obj_in.is_superuser
+            profile_picture=default_profile_pic  # Add default profile picture
         )
         db.add(db_obj)
         db.commit()

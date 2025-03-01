@@ -1,46 +1,49 @@
 # app/api/user_routes.py
 from typing import Any, List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_db
 from app.models import User
 from app.repositories.user_repository import user_repository
-from app.schemas.user import UserCreate, UserResponse, UserUpdate
+from app.schemas.user import UserCreate, UserResponse, UserUpdate, ProfilePictureResponse
 from app.core.security import get_password_hash
+from app.utils.file_upload import save_upload_file, delete_file
+from app.core.auth import get_current_user
+from app.core.config import settings
 
 router = APIRouter(prefix="/api/v1/users", tags=["users"])
 
-@router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-def create_user(
-    user_in: UserCreate,
-    db: Session = Depends(get_db)
-) -> Any:
-    """
-    Create a new user.
-    """
-    # Check if user with this email already exists
-    user = user_repository.get_by_email(db, email=user_in.email)
-    if user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A user with this email already exists"
-        )
+# @router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+# def create_user(
+#     user_in: UserCreate,
+#     db: Session = Depends(get_db)
+# ) -> Any:
+#     """
+#     Create a new user.
+#     """
+#     # Check if user with this email already exists
+#     user = user_repository.get_by_email(db, email=user_in.email)
+#     if user:
+#         raise HTTPException(
+#             status_code=status.HTTP_400_BAD_REQUEST,
+#             detail="A user with this email already exists"
+#         )
     
-    # Check if username is taken
-    user = user_repository.get_by_username(db, username=user_in.username)
-    if user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already taken"
-        )
+#     # Check if username is taken
+#     user = user_repository.get_by_username(db, username=user_in.username)
+#     if user:
+#         raise HTTPException(
+#             status_code=status.HTTP_400_BAD_REQUEST,
+#             detail="Username already taken"
+#         )
     
-    # Hash password
-    hashed_password = get_password_hash(user_in.password)
+#     # Hash password
+#     hashed_password = get_password_hash(user_in.password)
     
-    # Create user
-    user = user_repository.create(db, obj_in=user_in, hashed_password=hashed_password)
-    return user
+#     # Create user
+#     user = user_repository.create(db, obj_in=user_in, hashed_password=hashed_password)
+#     return user
 
 @router.get("/", response_model=List[UserResponse])
 def list_users(
@@ -85,3 +88,80 @@ def get_user_by_email(
             detail="User not found"
         )
     return user
+
+@router.post("/me/profile-picture", response_model=ProfilePictureResponse)
+async def upload_profile_picture(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> Any:
+    """
+    Upload a profile picture for the current user.
+    """
+    # Validate file size
+    if file.size > settings.MAX_PROFILE_PICTURE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File too large. Maximum size is 5MB."
+        )
+    
+    # Validate file type
+    if file.content_type not in settings.ALLOWED_PROFILE_PICTURE_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid file type. Allowed types are JPEG, PNG, and GIF."
+        )
+    
+    try:
+        # Delete old profile picture if it exists
+        if current_user.profile_picture:
+            delete_file(current_user.profile_picture)
+        
+        # Save new profile picture
+        filename = await save_upload_file(file)
+        
+        # Update user record
+        current_user.profile_picture = filename
+        db.commit()
+        
+        return {
+            "profile_picture": filename,
+            "message": "Profile picture updated successfully"
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not upload file"
+        )
+
+@router.delete("/me/profile-picture", response_model=ProfilePictureResponse)
+async def delete_profile_picture(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> Any:
+    """
+    Delete the current user's profile picture.
+    """
+    if not current_user.profile_picture:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No profile picture found"
+        )
+    
+    try:
+        # Delete the file
+        delete_file(current_user.profile_picture)
+        
+        # Update user record
+        current_user.profile_picture = None
+        db.commit()
+        
+        return {
+            "profile_picture": None,
+            "message": "Profile picture deleted successfully"
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not delete profile picture"
+        )
