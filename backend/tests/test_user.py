@@ -11,6 +11,7 @@ import pytest
 from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
 from app.models.user import User
+from app.models.show import Show
 from app.core.security import get_password_hash
 from app.repositories.user_repository import user_repository
 from app.schemas.user import UserCreate
@@ -61,11 +62,11 @@ def test_delete_user(db_session):
         deleted_user = user_repository.get(db_session, id=user.id)
         assert deleted_user is None, "User was not deleted"
 
-def create_user():
+def create_user(db):
     # Create a new database session
-    db = SessionLocal()
+    # db = SessionLocal()
     
-    try:
+    # try:
         # Check if the test user already exists
         existing_user = user_repository.get_by_email(db, email="panda@tidmee.com")
         
@@ -94,14 +95,14 @@ def create_user():
         print(f"Created new user: {new_user.username} (ID: {new_user.id})")
         return new_user
         
-    finally:
-        db.close()
+    # finally:
+    #     db.close()
 
-def list_all_users():
+def list_all_users(db):
     # Create a new database session
-    db = SessionLocal()
+    # db = SessionLocal()
     
-    try:
+    # try:
         # Get all users from database
         users = db.query(User).all()
         
@@ -119,14 +120,14 @@ def list_all_users():
             print(f"Updated: {user.updated_at}")
             print("-" * 30)
             
-    finally:
-        db.close()
+    # finally:
+    #     db.close()
 
-def delete_user(user_id: int):
+def delete_user(db, user_id: int):
     # Create a new database session
-    db = SessionLocal()
+    # db = SessionLocal()
     
-    try:
+    # try:
         # Get the user by ID
         user = user_repository.get(db, id=user_id)
         
@@ -138,14 +139,14 @@ def delete_user(user_id: int):
         user_repository.delete(db, id=user_id)
         print(f"Deleted user: {user.username} (ID: {user.id})")
         
-    finally:
-        db.close()
+    # finally:
+    #     db.close()
 
-def delete_all_user():
+def delete_all_user(db):
     # Create a new database session
-    db = SessionLocal()
+    # db = SessionLocal()
     
-    try:
+    # try:
         # Get all users from database
         users = db.query(User).all()
         
@@ -158,24 +159,25 @@ def delete_all_user():
             print(f"Deleting user: {user.username} (ID: {user.id})")
             user_repository.delete(db, id=user.id)
             
-    finally:
-        db.close()
+    # finally:
+    #     db.close()
 
 if __name__ == "__main__":
-    
-    # # delete all user
-    delete_all_user()
-    
+    db = SessionLocal()
     # Create a test user
-    user = create_user()
-    
-    # # List all users in the database
-    list_all_users()
-    
-    # # wish_to_delete = input("Do you want to delete a user? (y/n): ")
-    # # if wish_to_delete.lower() == "y":
-    # #     user_id = str(input("Enter the user ID to delete: "))
-    # #     delete_user(user_id)
-    # #     list_all_users()
-    delete_user(user.id)
+    try:
+        
+        user = create_user(db)
+        
+        # # List all users in the database
+        list_all_users(db)
+        
+        # # wish_to_delete = input("Do you want to delete a user? (y/n): ")
+        # # if wish_to_delete.lower() == "y":
+        # #     user_id = str(input("Enter the user ID to delete: "))
+        # #     delete_user(user_id)
+        # #     list_all_users()
+        delete_user(db, user.id)
+    finally:
+        db.close()
 

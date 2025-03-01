@@ -42,18 +42,22 @@ class Settings(BaseSettings):
     # GOOGLE_CLIENT_SECRET: str
     # GOOGLE_REDIRECT_URI: str
     
-    # # JWT settings for session management
-    # JWT_SECRET_KEY: str
-    # JWT_ALGORITHM: str = "HS256"
-    # ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    # JWT settings for session management
+    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "your-secret-key-here")
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     
-    # # CORS settings
-    # BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
-
+    # Security settings
+    VERIFY_EMAIL: bool = True
+    PASSWORD_RESET_TOKEN_EXPIRE_HOURS: int = 48
     
-    # class Config:
-    #     env_file = ".env"
-    #     case_sensitive = True
+    # CORS settings
+    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
+    
+    class Config:
+        env_file = ".env"
+        case_sensitive = True
 
 @lru_cache()
 def get_settings():

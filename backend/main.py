@@ -4,17 +4,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
 
-from app.api import user_routes
-# from app.api import auth_routes
+from app.api import user_routes, show_routes, episode_routes, auth_routes
 from app.core.config import settings
 from app.db.session import engine
 from app.db.base import Base  # Import Base from base.py instead of models directly
 
 # Import all models to ensure they are registered with SQLAlchemy
-from app.models.user import User  # Import each model explicitly
-# from app.models.room import Room
-# from app.models.podcast import Podcast
-# from app.models.episode import Episode
+# from app.models.user import User  # Import each model explicitly
+# from app.models.show import Show
+# from app.models.episode import Episode, Recording, Live  # Include all episode classes
+from app.models import *  # This imports everything from __init__.py once
 
 def create_tables():
     """Create database tables"""
@@ -65,6 +64,9 @@ def get_application():
 
     # Include routers
     _app.include_router(user_routes.router)
+    _app.include_router(show_routes.router)
+    _app.include_router(episode_routes.router)
+    _app.include_router(auth_routes.router)
     # _app.include_router(room_routes.router, prefix="/api/v1/rooms", tags=["rooms"])
     # _app.include_router(podcast_routes.router, prefix="/api/v1/podcasts", tags=["podcasts"])
     # _app.include_router(websocket_routes.router, tags=["websocket"])
