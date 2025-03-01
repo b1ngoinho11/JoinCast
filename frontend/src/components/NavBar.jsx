@@ -115,8 +115,8 @@ function NavbarDefault() {
                     Account
                   </Dropdown.Item>
                   <Dropdown.Divider />
-                  <Dropdown.Item href="#settings" className="py-2">
-                    Settings
+                  <Dropdown.Item href="/dashboard" className="py-2">
+                    Studio
                   </Dropdown.Item>
                   <Dropdown.Divider />
                   <Dropdown.Item onClick={logout} className="py-2 text-danger" href="/">
