@@ -8,6 +8,8 @@ import FollowingPage from "../pages/followingPage";
 import AccountPage from "../pages/accountPage";
 import Cookies from "js-cookie";
 import AnalyticsPage from "../pages/analyticsPage";
+import ContentPage from "@/pages/contentPage";
+import DashboardPage from "@/pages/dashboardPage";
 
 const ProtectedLoader = () => {
   const token = Cookies.get("auth_token");
@@ -42,19 +44,29 @@ const router = createBrowserRouter([
         path: "/following",
         element: <FollowingPage />,
       },
+      {
+        path: "/myaccount",
+        element: <AccountPage />,
+        loader: ProtectedLoader,
+      },
     ],
   },
   {
     element: <Layout withSidebar={true} />,
     children: [
       {
-        path: "/myaccount",
-        element: <AccountPage />,
+        path: "/analytics",
+        element: <AnalyticsPage />,
         loader: ProtectedLoader,
       },
       {
-        path: "analytics",
-        element: <AnalyticsPage />,
+        path: "/content",
+        element: <ContentPage />,
+        loader: ProtectedLoader,
+      },
+      {
+        path: "/dashboard",
+        element: <DashboardPage />,
         loader: ProtectedLoader,
       }
     ],

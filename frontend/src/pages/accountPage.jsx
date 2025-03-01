@@ -113,7 +113,7 @@ const AccountPage = () => {
 
     return (
             <div style={{ flex: 1, padding: '20px'}}>
-                <h1 className="mb-4">Account Settings</h1>
+                <h1 className="mb-4" style={{padding: '0px 150px'}}>Account Settings</h1>
                 
                 {errorMessage && <Alert variant="danger">{errorMessage}</Alert>}
                 {successMessage && <Alert variant="success">{successMessage}</Alert>}
@@ -130,7 +130,7 @@ const AccountPage = () => {
                         marginBottom: "1rem"
                     }}>
                         <Image 
-                            src={previewImage || "/default-avatar.png"}
+                            src={previewImage || "../assets/logo.png"}
                             style={{ 
                                 width: "100%",
                                 height: "100%",
