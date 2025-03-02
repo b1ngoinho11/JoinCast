@@ -21,12 +21,12 @@ const EditVideoModal = ({ show, handleClose, video, handleEditSubmit }) => {
     };
 
     return (
-        <Modal show={show} onHide={handleClose}>
+        <Modal show={show} onHide={handleClose} style={{background: 'rgba(0, 0, 0, 0.1)'}}>
             <Modal.Header closeButton>
                 <Modal.Title>Edit Video</Modal.Title>
             </Modal.Header>
             <Modal.Body>
-                <Form onSubmit={handleSubmit}>
+                <Form onSubmit={handleSubmit} style={{ borderRadius: '50%'}}>
                     <Form.Group controlId="formVideoName">
                         <Form.Label>Video Title</Form.Label>
                         <Form.Control

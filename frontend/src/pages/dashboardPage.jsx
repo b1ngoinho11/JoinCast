@@ -1,66 +1,42 @@
 // src/Dashboard.js
-import React from 'react';
-import { Container, Row, Col, Navbar, Nav, Card } from 'react-bootstrap';
+import LiveStream from '@/components/liveStream';
+import UploadVideo from '@/components/uploadVideo';
+import React, { useState } from 'react';
+import { Container, Row, Col, Card, Form, Button } from 'react-bootstrap';
 
 const DashboardPage = () => {
+  const [videoTitle, setVideoTitle] = useState('');
+  const [videoDescription, setVideoDescription] = useState('');
+  const [videoFile, setVideoFile] = useState(null);
+  const [thumbnail, setThumbnail] = useState('');
+
+  const handleVideoUpload = (e) => {
+    e.preventDefault();
+    // Handle video upload logic here
+    console.log('Video Title:', videoTitle);
+    console.log('Video Description:', videoDescription);
+    console.log('Video File:', videoFile);
+    console.log('Thumbnail:', thumbnail);
+    // Reset form
+    setVideoTitle('');
+    setVideoDescription('');
+    setVideoFile(null);
+    setThumbnail('');
+  };
+
+  const handleStartLiveStream = () => {
+    // Handle live stream logic here
+    console.log('Live stream started!');
+  };
+
   return (
     <Container fluid>
-      <Navbar bg="dark" variant="dark">
-        <Navbar.Brand href="#home">YouTube Dashboard</Navbar.Brand>
-        <Nav className="me-auto">
-          <Nav.Link href="#home">Home</Nav.Link>
-          <Nav.Link href="#trending">Trending</Nav.Link>
-          <Nav.Link href="#subscriptions">Subscriptions</Nav.Link>
-        </Nav>
-      </Navbar>
-
-      <Row>
-        <Col md={2} className="bg-light sidebar">
-          <h5 className="p-3">Categories</h5>
-          <Nav className="flex-column">
-            <Nav.Link href="#music">Music</Nav.Link>
-            <Nav.Link href="#gaming">Gaming</Nav.Link>
-            <Nav.Link href="#news">News</Nav.Link>
-            <Nav.Link href="#sports">Sports</Nav.Link>
-          </Nav>
+      <Row className="p-3">
+        <Col md={6}>
+        <UploadVideo />
         </Col>
-
-        <Col md={10}>
-          <Row className="p-3">
-            <Col md={4}>
-              <Card>
-                <Card.Img variant="top" src="https://via.placeholder.com/150" />
-                <Card.Body>
-                  <Card.Title>Video Title 1</Card.Title>
-                  <Card.Text>
-                    Description of video 1.
-                  </Card.Text>
-                </Card.Body>
-              </Card>
-            </Col>
-            <Col md={4}>
-              <Card>
-                <Card.Img variant="top" src="https://via.placeholder.com/150" />
-                <Card.Body>
-                  <Card.Title>Video Title 2</Card.Title>
-                  <Card.Text>
-                    Description of video 2.
-                  </Card.Text>
-                </Card.Body>
-              </Card>
-            </Col>
-            <Col md={4}>
-              <Card>
-                <Card.Img variant="top" src="https://via.placeholder.com/150" />
-                <Card.Body>
-                  <Card.Title>Video Title 3</Card.Title>
-                  <Card.Text>
-                    Description of video 3.
-                  </Card.Text>
-                </Card.Body>
-              </Card>
-            </Col>
-          </Row>
+        <Col md={6}>
+        <LiveStream />
         </Col>
       </Row>
     </Container>

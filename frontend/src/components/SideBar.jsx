@@ -7,7 +7,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
   const location = useLocation(); // Get current location
 
   return (
-    <div style={{ position: "relative" }}>
+    <div style={{ position: "relative",}}>
       {/* Overlay when sidebar is closed */}
       {!isOpen && (
         <div
@@ -49,7 +49,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           {isOpen ? "<" : ">"}
         </button>
 
-        <Nav className="flex-column" style={{ height: "100vh", paddingTop: "50px" }}>
+        <Nav className="flex-column" style={{ height: "100vh", paddingTop: "50px", borderRadius: '50%'}}>
           <Nav.Link
             as={Link}
             to="/dashboard"

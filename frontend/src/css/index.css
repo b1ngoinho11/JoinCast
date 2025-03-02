@@ -4,13 +4,14 @@
 @tailwind utilities;
 
 * {
-    font-family: Poppins, sans-serif;
-    /* background-color: #FFF5EE; */
+    font-family: Poppins;
     margin: 0;
     padding: 0;
 }
 
-
+div {
+  /* background: #FFF5EE; */
+}
 
 @layer base {
   :root {

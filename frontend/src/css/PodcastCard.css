@@ -10,7 +10,7 @@
 .podcast-card-image {
     object-fit: cover; /* Ensure the image covers its box */
     width: 100%;       /* Image takes full width of the card */
-    height: 120px;     /* Maintain a fixed height */
+    height: px;     /* Maintain a fixed height */
 }
 
 .cardContent {
@@ -20,19 +20,35 @@
 
 .user-info {
     display: flex;
-    align-items: center; /* Align avatar and username vertically */
+    align-items: center; /* Align avatar and text vertically */
     margin-top: 10px; /* Space between title and this section */
 }
+
+.user-text {
+    display: flex;
+    flex-direction: column; /* Stack title above username */
+}
+
+.user-text p {
+    margin: 0; /* Remove default margin */
+}
+
+.username {
+    font-size: 14px; /* Adjust username size */
+    font-weight: normal; /* Make username normal weight */
+}
+
+.title {
+    font-size: 16px; /* Slightly larger title */
+    font-weight: bold; /* Make title bold */
+}
+
 
 .avatar {
     width: 30px; /* Set desired width */
     height: 30px; /* Set desired height */
     border-radius: 50%; /* Make it circular */
     margin-right: 10px; /* Space between avatar and text */
-}
-
-.username {
-    margin: 0; /* Remove default margin */
 }
 
 .avatar-genre-time {

@@ -46,8 +46,9 @@ function NavbarDefault() {
       expand="lg"
       style={{
         height: "80px",
-        padding: "0.5rem 0",
-        boxShadow: "0 2px 0 0 rgba(0,0,0,0.1)",
+        padding: "0",
+        borderBottom: "1px solid #e0e0e0",
+        background: "#fff5ee",
       }}
     >
       <Container style={{ marginTop: "10px", maxWidth: "92%" }} fluid>
@@ -126,7 +127,7 @@ function NavbarDefault() {
               </Dropdown>
             </>
           ) : (
-            <Button variant="outline-primary" href="/login" className="ms-2">
+            <Button variant="primary" href="/login" className="ms-2">
               Sign In
             </Button>
           )}

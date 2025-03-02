@@ -57,7 +57,7 @@
     cursor: pointer;
     transition: background-color 0.2s, color 0.2s;
     width: 200px;
-
+    background-color: white;
 }
 
 .category-row {
