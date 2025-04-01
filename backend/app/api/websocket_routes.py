@@ -48,6 +48,29 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str, room_id: str):
                         room_id,
                         user_id
                     )
+            
+            elif message['type'] == 'speech-event':
+                # Process speech detection events
+                is_speaking = message.get('speaking', False)
+                timestamp = message.get('timestamp', 0)
+                speaking_start = message.get('speakingStart')
+                
+                # Record the speech event in the database
+                manager.record_speech_event(
+                    room_id, 
+                    message['sender'], 
+                    is_speaking, 
+                    timestamp,
+                    speaking_start
+                )
+                
+                # Broadcast to all participants
+                await manager.broadcast_speech_event(
+                    room_id, 
+                    message['sender'], 
+                    is_speaking
+                )
+                
             else:
                 await manager.broadcast_to_room(data, room_id, user_id)
                 
