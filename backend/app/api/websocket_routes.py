@@ -1,16 +1,43 @@
 # app/api/websocket_routes.py
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, status, WebSocket, WebSocketDisconnect
+from sqlalchemy.orm import Session
 import json
 import base64
 
+from app.api.dependencies import get_db
+from app.repositories.episode_repository import episode_repository
+from app.schemas.episode import EpisodeUpdate
 from app.models.websocket import ConnectionManager
 
 manager = ConnectionManager()
 
 router = APIRouter(prefix="/api/v1/websocket", tags=["websocket"])
 
-@router.websocket("/{user_id}/{room_id}")
-async def websocket_endpoint(websocket: WebSocket, user_id: str, room_id: str):
+@router.websocket("/{episode_id}/{user_id}")
+async def websocket_endpoint(
+    websocket: WebSocket, 
+    episode_id: str, 
+    user_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    WebSocket endpoint for live episodes.
+    
+    This endpoint allows users to connect to a live episode and exchange messages.
+    """
+    # Check if the episode exists and is active
+    episode = episode_repository.get(db, id=episode_id)
+    if not episode or episode.type != "live" or not episode.is_active:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+    
+    # Create a room ID based on episode ID
+    room_id = f"episode_{episode_id}"
+    
+    # Associate the room with the episode
+    manager.associate_episode(room_id, episode_id)
+    
+    # Connect to WebSocket
     await manager.connect(websocket, user_id, room_id)
     try:
         while True:
@@ -40,6 +67,10 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str, room_id: str):
             elif message['type'] == 'stop-recording':
                 filename = manager.stop_recording(room_id)
                 if filename:
+                    # Update the episode record with the recording file
+                    episode_update = EpisodeUpdate(video=filename)
+                    episode_repository.update(db, db_obj=episode, obj_in=episode_update)
+                    
                     await manager.broadcast_to_room(
                         json.dumps({
                             'type': 'recording-stopped',

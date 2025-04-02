@@ -1,17 +1,9 @@
 # app/models/websocket.py
 from fastapi import WebSocket
-from typing import Dict, Set, List
-import os
+from typing import Dict, Set, List, Optional
 from datetime import datetime
-import subprocess
 import json
-
-LIVES_DIR = "episodes/lives"
-LIVES_LOG_DIR = "episodes/live_logs"
-SESSIONS_LOG_DIR = "episodes/session_logs"
-os.makedirs(LIVES_DIR, exist_ok=True)
-os.makedirs(LIVES_LOG_DIR, exist_ok=True)
-os.makedirs(SESSIONS_LOG_DIR, exist_ok=True)
+from app.utils.episode_file_handler import start_live_recording, add_audio_chunk, stop_live_recording, save_logs
 
 class ConnectionManager:
     def __init__(self):
@@ -20,6 +12,7 @@ class ConnectionManager:
         self.recording_sessions: Dict[str, dict] = {}
         self.speech_events: Dict[str, List[dict]] = {}  # Room ID -> list of speech events
         self.session_events: Dict[str, List[dict]] = {}  # Room ID -> list of session events (join/leave)
+        self.episode_mappings: Dict[str, str] = {}  # Room ID -> Episode ID
 
     async def connect(self, websocket: WebSocket, client_id: str, room_id: str):
         await websocket.accept()
@@ -81,39 +74,13 @@ class ConnectionManager:
 
     def _save_logs(self, room_id: str):
         """Save speech and session events to JSON files when a room is closed"""
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        
-        # Save speech events
-        if room_id in self.speech_events and self.speech_events[room_id]:
-            speech_filename = f"{LIVES_LOG_DIR}/recording_log_{room_id}_{timestamp}.json"
-            
-            try:
-                with open(speech_filename, 'w') as f:
-                    json.dump({
-                        "room_id": room_id,
-                        "session_end": datetime.now().isoformat(),
-                        "events": self.speech_events[room_id]
-                    }, f, indent=2)
-                
-                print(f"Speech log saved: {speech_filename}")
-            except Exception as e:
-                print(f"Error saving speech log: {e}")
-        
-        # Save session events
-        if room_id in self.session_events and self.session_events[room_id]:
-            session_filename = f"{SESSIONS_LOG_DIR}/session_log_{room_id}_{timestamp}.json"
-            
-            try:
-                with open(session_filename, 'w') as f:
-                    json.dump({
-                        "room_id": room_id,
-                        "session_end": datetime.now().isoformat(),
-                        "events": self.session_events[room_id]
-                    }, f, indent=2)
-                
-                print(f"Session log saved: {session_filename}")
-            except Exception as e:
-                print(f"Error saving session log: {e}")
+        episode_id = self.episode_mappings.get(room_id)
+        save_logs(
+            room_id, 
+            self.speech_events.get(room_id, []), 
+            self.session_events.get(room_id, []),
+            episode_id
+        )
 
     def record_speech_event(self, room_id: str, client_id: str, is_speaking: bool, 
                           timestamp: float, speaking_start: float = None):
@@ -155,55 +122,26 @@ class ConnectionManager:
                     await self.active_connections[uid].send_text(message)
 
     def start_recording(self, room_id: str, mime_type: str):
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        temp_filename = f"{LIVES_DIR}/temp_room_{room_id}_{timestamp}.webm"
-        final_filename = f"{LIVES_DIR}/room_{room_id}_{timestamp}.wav"
-        
-        self.recording_sessions[room_id] = {
-            'temp_filename': temp_filename,
-            'final_filename': final_filename,
-            'mime_type': mime_type,
-            'file_handle': open(temp_filename, 'wb'),
-            'is_recording': True,
-            'start_time': datetime.now()
-        }
-        return final_filename
+        """Start recording a live session"""
+        episode_id = self.episode_mappings.get(room_id)
+        recording_session = start_live_recording(room_id, mime_type, episode_id)
+        self.recording_sessions[room_id] = recording_session
+        return recording_session['final_filename']
 
     def stop_recording(self, room_id: str):
-        if room_id in self.recording_sessions and self.recording_sessions[room_id]['is_recording']:
+        """Stop recording a live session"""
+        if room_id in self.recording_sessions:
             recording_info = self.recording_sessions[room_id]
-            recording_info['is_recording'] = False
-            
-            try:
-                # Close the temporary file
-                recording_info['file_handle'].close()
-
-                # Convert WebM to WAV using FFmpeg
-                subprocess.run([
-                    'ffmpeg',
-                    '-i', recording_info['temp_filename'],
-                    '-acodec', 'pcm_s16le',
-                    '-ar', '44100',
-                    recording_info['final_filename']
-                ], check=True)
-
-                # Remove temporary file
-                os.remove(recording_info['temp_filename'])
-                
-                return recording_info['final_filename']
-            except Exception as e:
-                print(f"Error processing recording: {e}")
-                return None
-            finally:
-                # Clean up recording session
-                self.recording_sessions.pop(room_id, None)
+            final_path = stop_live_recording(recording_info)
+            self.recording_sessions.pop(room_id, None)
+            return final_path
         return None
 
     def add_audio_chunk(self, room_id: str, audio_data: bytes):
+        """Add an audio chunk to a recording"""
         if room_id in self.recording_sessions and self.recording_sessions[room_id]['is_recording']:
-            try:
-                # Write the raw audio data directly to the temporary file
-                self.recording_sessions[room_id]['file_handle'].write(audio_data)
-                self.recording_sessions[room_id]['file_handle'].flush()
-            except Exception as e:
-                print(f"Error writing audio chunk: {e}")
+            add_audio_chunk(self.recording_sessions[room_id]['file_handle'], audio_data)
+            
+    def associate_episode(self, room_id: str, episode_id: str):
+        """Associate a room with an episode"""
+        self.episode_mappings[room_id] = episode_id

@@ -78,7 +78,22 @@ def create_live(
     creator_id: str,
     db: Session = Depends(get_db)
 ) -> Any:
-    episode = episode_repository.create_live(db, obj_in=episode_in, creator_id=creator_id)
+    """
+    Create a new live episode.
+    
+    Returns the created live episode with a unique ID that can be used to connect to WebSocket.
+    """
+    # Generate episode ID beforehand
+    episode_id = str(uuid.uuid4())
+    
+    # Create the live episode with pre-generated ID
+    episode = episode_repository.create_live(
+        db, 
+        obj_in=episode_in, 
+        creator_id=creator_id,
+        episode_id=episode_id
+    )
+    
     return episode
 
 @router.get("/", response_model=List[EpisodeResponse])
