@@ -6,11 +6,11 @@ from datetime import datetime
 import subprocess
 import json
 
-RECORDINGS_DIR = "recordings"
-RECORDINGS_LOG_DIR = "recordings_logs"
-SESSIONS_LOG_DIR = "sessions_logs"
-os.makedirs(RECORDINGS_DIR, exist_ok=True)
-os.makedirs(RECORDINGS_LOG_DIR, exist_ok=True)
+LIVES_DIR = "episodes/lives"
+LIVES_LOG_DIR = "episodes/live_logs"
+SESSIONS_LOG_DIR = "episodes/session_logs"
+os.makedirs(LIVES_DIR, exist_ok=True)
+os.makedirs(LIVES_LOG_DIR, exist_ok=True)
 os.makedirs(SESSIONS_LOG_DIR, exist_ok=True)
 
 class ConnectionManager:
@@ -85,7 +85,7 @@ class ConnectionManager:
         
         # Save speech events
         if room_id in self.speech_events and self.speech_events[room_id]:
-            speech_filename = f"{RECORDINGS_LOG_DIR}/recording_log_{room_id}_{timestamp}.json"
+            speech_filename = f"{LIVES_LOG_DIR}/recording_log_{room_id}_{timestamp}.json"
             
             try:
                 with open(speech_filename, 'w') as f:
@@ -156,8 +156,8 @@ class ConnectionManager:
 
     def start_recording(self, room_id: str, mime_type: str):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        temp_filename = f"{RECORDINGS_DIR}/temp_room_{room_id}_{timestamp}.webm"
-        final_filename = f"{RECORDINGS_DIR}/room_{room_id}_{timestamp}.wav"
+        temp_filename = f"{LIVES_DIR}/temp_room_{room_id}_{timestamp}.webm"
+        final_filename = f"{LIVES_DIR}/room_{room_id}_{timestamp}.wav"
         
         self.recording_sessions[room_id] = {
             'temp_filename': temp_filename,

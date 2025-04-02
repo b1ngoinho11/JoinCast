@@ -1,7 +1,7 @@
 # app/repositories/episode_repository.py
 from typing import Optional, List
 from sqlalchemy.orm import Session
-from app.models import User, Episode, Recording, Live  # Import from the package
+from app.models import User, Episode, Recording, Live
 from app.repositories.base import BaseRepository
 from app.schemas.episode import EpisodeCreate, RecordingCreate, LiveCreate, EpisodeUpdate
 
@@ -10,14 +10,15 @@ class EpisodeRepository(BaseRepository[Episode]):
         return db.query(Episode).filter(Episode.name == name).first()
 
     def create_recording(
-        self, db: Session, *, obj_in: RecordingCreate, creator_id: str
+        self, db: Session, *, obj_in: RecordingCreate, creator_id: str, episode_id: Optional[str] = None
     ) -> Recording:
         db_obj = Recording(
+            id=episode_id,  # Use provided ID if available
             name=obj_in.name,
             show_id=obj_in.show_id,
             creator_id=creator_id,
             thumbnail=obj_in.thumbnail,
-            video=obj_in.video,
+            video=obj_in.video,  # Using the video field from schema
             comments=obj_in.comments,
         )
         db.add(db_obj)
@@ -26,9 +27,10 @@ class EpisodeRepository(BaseRepository[Episode]):
         return db_obj
 
     def create_live(
-        self, db: Session, *, obj_in: LiveCreate, creator_id: str
+        self, db: Session, *, obj_in: LiveCreate, creator_id: str, episode_id: Optional[str] = None
     ) -> Live:
         db_obj = Live(
+            id=episode_id,  # Use provided ID if available
             name=obj_in.name,
             show_id=obj_in.show_id,
             creator_id=creator_id,
@@ -53,6 +55,7 @@ class EpisodeRepository(BaseRepository[Episode]):
 
     def update(self, db: Session, *, db_obj: Episode, obj_in: EpisodeUpdate) -> Episode:
         update_data = obj_in.dict(exclude_unset=True)
+        
         for field in update_data:
             if field not in ["speaker_ids", "listener_ids", "speaker_request_ids"]:
                 setattr(db_obj, field, update_data[field])
