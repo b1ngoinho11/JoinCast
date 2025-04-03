@@ -7,9 +7,7 @@ import base64
 from app.api.dependencies import get_db
 from app.repositories.episode_repository import episode_repository
 from app.schemas.episode import EpisodeUpdate
-from app.models.websocket import ConnectionManager
-
-manager = ConnectionManager()
+from app.models.websocket import manager
 
 router = APIRouter(prefix="/api/v1/websocket", tags=["websocket"])
 
@@ -100,6 +98,34 @@ async def websocket_endpoint(
                     room_id, 
                     message['sender'], 
                     is_speaking
+                )
+            elif message['type'] == 'video-data' and 'video' in message:
+                try:
+                    # Decode base64 video data
+                    video_bytes = base64.b64decode(message['video'])
+                    manager.add_video_chunk(room_id, video_bytes)
+                except Exception as e:
+                    print(f"Error processing video chunk: {e}")
+            
+            elif message['type'] == 'start-screen-share':
+                mime_type = message.get('mimeType', 'video/webm')
+                await manager.broadcast_to_room(
+                    json.dumps({
+                        'type': 'screen-share-started',
+                        'sender': user_id
+                    }),
+                    room_id,
+                    user_id
+                )
+            
+            elif message['type'] == 'stop-screen-share':
+                await manager.broadcast_to_room(
+                    json.dumps({
+                        'type': 'screen-share-stopped',
+                        'sender': user_id
+                    }),
+                    room_id,
+                    user_id
                 )
                 
             else:

@@ -3,7 +3,7 @@ from fastapi import WebSocket
 from typing import Dict, Set, List, Optional
 from datetime import datetime
 import json
-from app.utils.episode_file_handler import start_live_recording, add_audio_chunk, stop_live_recording, save_logs
+from app.utils.episode_file_handler import start_live_recording, add_audio_chunk, stop_live_recording, save_logs, add_video_chunk
 
 class ConnectionManager:
     def __init__(self):
@@ -13,6 +13,7 @@ class ConnectionManager:
         self.speech_events: Dict[str, List[dict]] = {}  # Room ID -> list of speech events
         self.session_events: Dict[str, List[dict]] = {}  # Room ID -> list of session events (join/leave)
         self.episode_mappings: Dict[str, str] = {}  # Room ID -> Episode ID
+        self.screen_sharers: Dict[str, str] = {}  # Room ID -> User ID
 
     async def connect(self, websocket: WebSocket, client_id: str, room_id: str):
         await websocket.accept()
@@ -145,3 +146,16 @@ class ConnectionManager:
     def associate_episode(self, room_id: str, episode_id: str):
         """Associate a room with an episode"""
         self.episode_mappings[room_id] = episode_id
+    
+    def add_video_chunk(self, room_id: str, video_data: bytes):
+        """Add a video chunk to a recording"""
+        if room_id in self.recording_sessions and self.recording_sessions[room_id]['is_recording']:
+            add_video_chunk(self.recording_sessions[room_id]['file_handle'], video_data)
+    
+    def set_screen_sharer(self, room_id: str, user_id: str):
+        self.screen_sharers[room_id] = user_id
+    
+    def clear_screen_sharer(self, room_id: str):
+        self.screen_sharers.pop(room_id, None)
+        
+manager = ConnectionManager()

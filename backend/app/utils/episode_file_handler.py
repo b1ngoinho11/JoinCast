@@ -222,3 +222,67 @@ def save_logs(room_id: str, speech_events: list, session_events: list, episode_i
             session_filename = None
     
     return speech_filename, session_filename
+
+def start_live_recording(room_id: str, mime_type: str, episode_id: Optional[str] = None) -> Dict:
+    """
+    Start recording a live session with video support.
+    """
+    temp_filename = f"{LIVES_DIR}/temp_{episode_id}.webm"
+    final_filename = f"{LIVES_DIR}/{episode_id}.mp4"  # Changed to mp4 for better compatibility
+    
+    recording_session = {
+        'temp_filename': temp_filename,
+        'final_filename': final_filename,
+        'mime_type': mime_type,
+        'file_handle': open(temp_filename, 'wb'),
+        'is_recording': True,
+        'start_time': datetime.now(),
+        'episode_id': episode_id,
+        'has_video': 'video' in mime_type  # Track if this is a video recording
+    }
+    
+    return recording_session
+
+def add_video_chunk(file_handle: BinaryIO, video_data: bytes) -> bool:
+    """Add a video chunk to a recording"""
+    return add_audio_chunk(file_handle, video_data)  # Same implementation for now
+
+def stop_live_recording(recording_info: Dict) -> str:
+    """Stop recording a live session and convert to final format."""
+    if not recording_info or not recording_info.get('is_recording', False):
+        return None
+    
+    try:
+        # Close the temporary file
+        recording_info['file_handle'].close()
+
+        # Convert to final format
+        if recording_info['has_video']:
+            # For video recordings, convert to MP4
+            subprocess.run([
+                'ffmpeg',
+                '-i', recording_info['temp_filename'],
+                '-c:v', 'libx264',
+                '-preset', 'fast',
+                '-crf', '23',
+                '-c:a', 'aac',
+                '-b:a', '128k',
+                recording_info['final_filename']
+            ], check=True)
+        else:
+            # For audio-only, convert to WAV
+            subprocess.run([
+                'ffmpeg',
+                '-i', recording_info['temp_filename'],
+                '-acodec', 'pcm_s16le',
+                '-ar', '44100',
+                recording_info['final_filename']
+            ], check=True)
+
+        # Remove temporary file
+        delete_file(recording_info['temp_filename'])
+        
+        return recording_info['final_filename']
+    except Exception as e:
+        print(f"Error processing recording: {e}")
+        return None
