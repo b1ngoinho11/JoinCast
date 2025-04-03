@@ -95,10 +95,9 @@ def start_live_recording(room_id: str, mime_type: str, episode_id: Optional[str]
     Returns:
         Dict with recording session info
     """
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
-    temp_filename = f"{LIVES_DIR}/temp_{episode_id}_{timestamp}.webm"
-    final_filename = f"{LIVES_DIR}/{episode_id}_{timestamp}.wav"
+    temp_filename = f"{LIVES_DIR}/temp_{episode_id}.webm"
+    final_filename = f"{LIVES_DIR}/{episode_id}.wav"
     
     recording_session = {
         'temp_filename': temp_filename,

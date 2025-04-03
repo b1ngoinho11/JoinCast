@@ -6,7 +6,7 @@ import uvicorn
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
-from app.api import user_routes, show_routes, episode_routes, auth_routes, websocket_routes
+from app.api import user_routes, show_routes, episode_routes, auth_routes, websocket_routes, streaming_routes
 from app.core.config import settings
 from app.db.session import engine
 from app.db.base import Base  # Import Base from base.py instead of models directly
@@ -69,6 +69,7 @@ def get_application():
     _app.include_router(episode_routes.router)
     _app.include_router(auth_routes.router)
     _app.include_router(websocket_routes.router)
+    _app.include_router(streaming_routes.router)
     # _app.include_router(room_routes.router, prefix="/api/v1/rooms", tags=["rooms"])
     # _app.include_router(podcast_routes.router, prefix="/api/v1/podcasts", tags=["podcasts"])
     # _app.include_router(websocket_routes.router, tags=["websocket"])
