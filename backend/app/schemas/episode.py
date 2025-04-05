@@ -48,6 +48,9 @@ class LiveUpdate(EpisodeUpdate):
 
 class LiveResponse(EpisodeResponse):
     is_active: bool
-    speaker_ids: List[str]
-    listener_ids: List[str]
-    speaker_request_ids: List[str]
+    speaker_ids: Optional[List[str]] = []
+    listener_ids: Optional[List[str]] = []
+    speaker_request_ids: Optional[List[str]] = []
+    # speaker_ids: List[str]
+    # listener_ids: List[str]
+    # speaker_request_ids: List[str]

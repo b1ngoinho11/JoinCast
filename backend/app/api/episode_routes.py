@@ -13,24 +13,6 @@ from app.schemas.episode import (
 
 router = APIRouter(prefix="/api/v1/episodes", tags=["episodes"])
 
-@router.post("/recording", response_model=RecordingResponse, status_code=status.HTTP_201_CREATED)
-def create_recording(
-    episode_in: RecordingCreate,
-    creator_id: str,  # Assume passed in request; integrate auth later
-    db: Session = Depends(get_db)
-) -> Any:
-    episode = episode_repository.create_recording(db, obj_in=episode_in, creator_id=creator_id)
-    return episode
-
-@router.post("/live", response_model=LiveResponse, status_code=status.HTTP_201_CREATED)
-def create_live(
-    episode_in: LiveCreate,
-    creator_id: str,
-    db: Session = Depends(get_db)
-) -> Any:
-    episode = episode_repository.create_live(db, obj_in=episode_in, creator_id=creator_id)
-    return episode
-
 @router.get("/", response_model=List[EpisodeResponse])
 def list_episodes(
     db: Session = Depends(get_db),
@@ -71,3 +53,4 @@ def delete_episode(
     if not episode:
         raise HTTPException(status_code=404, detail="Episode not found")
     episode_repository.delete(db, id=episode_id)
+    
