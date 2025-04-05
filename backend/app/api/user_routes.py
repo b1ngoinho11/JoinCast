@@ -2,6 +2,7 @@
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
+from pathlib import Path
 
 from app.api.dependencies import get_db
 from app.models import User
@@ -14,36 +15,7 @@ from app.core.config import settings
 
 router = APIRouter(prefix="/api/v1/users", tags=["users"])
 
-# @router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-# def create_user(
-#     user_in: UserCreate,
-#     db: Session = Depends(get_db)
-# ) -> Any:
-#     """
-#     Create a new user.
-#     """
-#     # Check if user with this email already exists
-#     user = user_repository.get_by_email(db, email=user_in.email)
-#     if user:
-#         raise HTTPException(
-#             status_code=status.HTTP_400_BAD_REQUEST,
-#             detail="A user with this email already exists"
-#         )
-    
-#     # Check if username is taken
-#     user = user_repository.get_by_username(db, username=user_in.username)
-#     if user:
-#         raise HTTPException(
-#             status_code=status.HTTP_400_BAD_REQUEST,
-#             detail="Username already taken"
-#         )
-    
-#     # Hash password
-#     hashed_password = get_password_hash(user_in.password)
-    
-#     # Create user
-#     user = user_repository.create(db, obj_in=user_in, hashed_password=hashed_password)
-#     return user
+PROFILE_PICTURE_UPLOAD_DIR = Path("uploads/profile_pictures")
 
 @router.get("/", response_model=List[UserResponse])
 def list_users(
@@ -98,6 +70,8 @@ async def upload_profile_picture(
     """
     Upload a profile picture for the current user.
     """
+    print(f"Uploading file: {file.filename}, size: {file.size}, type: {file.content_type}")
+    
     # Validate file size
     if file.size > settings.MAX_PROFILE_PICTURE_SIZE:
         raise HTTPException(
@@ -112,13 +86,14 @@ async def upload_profile_picture(
             detail="Invalid file type. Allowed types are JPEG, PNG, and GIF."
         )
     
+    
     try:
         # Delete old profile picture if it exists
         if current_user.profile_picture:
-            delete_file(current_user.profile_picture)
+            delete_file(current_user.profile_picture, PROFILE_PICTURE_UPLOAD_DIR)
         
-        # Save new profile picture
-        filename = await save_upload_file(file)
+        # Save new profile picture to the profile pictures directory
+        filename = await save_upload_file(file, PROFILE_PICTURE_UPLOAD_DIR)
         
         # Update user record
         current_user.profile_picture = filename
@@ -149,8 +124,8 @@ async def delete_profile_picture(
         )
     
     try:
-        # Delete the file
-        delete_file(current_user.profile_picture)
+        # Delete the file from the profile pictures directory
+        delete_file(current_user.profile_picture, PROFILE_PICTURE_UPLOAD_DIR)
         
         # Update user record
         current_user.profile_picture = None
