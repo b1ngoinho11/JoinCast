@@ -1,0 +1,73 @@
+.cardBox {
+    width: 357px;
+    min-height: 260px;
+    max-height: 260px;
+    border: 1px solid #E5E5E5;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.podcast-card-image {
+    object-fit: cover; /* Ensure the image covers its box */
+    width: 100%;       /* Image takes full width of the card */
+    height: px;     /* Maintain a fixed height */
+}
+
+.cardContent {
+    padding: 4px;
+    color: #345665;
+}
+
+.user-info {
+    display: flex;
+    align-items: center; /* Align avatar and text vertically */
+    margin-top: 10px; /* Space between title and this section */
+}
+
+.user-text {
+    display: flex;
+    flex-direction: column; /* Stack title above username */
+}
+
+.user-text p {
+    margin: 0; /* Remove default margin */
+}
+
+.username {
+    font-size: 14px; /* Adjust username size */
+    font-weight: normal; /* Make username normal weight */
+}
+
+.title {
+    font-size: 16px; /* Slightly larger title */
+    font-weight: bold; /* Make title bold */
+}
+
+
+.avatar {
+    width: 30px; /* Set desired width */
+    height: 30px; /* Set desired height */
+    border-radius: 50%; /* Make it circular */
+    margin-right: 10px; /* Space between avatar and text */
+}
+
+.avatar-genre-time {
+    display: flex;
+    justify-content: space-between; /* Space between genre and time */
+    align-items: center; /* Align items vertically */
+    margin-top: 10px; /* Space between user info and this section */
+}
+
+.genre {
+    padding: 5px 10px; /* Add padding for the rounded rectangle */
+    border: 1px solid #E5E5E5; /* Border for the genre */
+    border-radius: 50px; /* Rounded corners */
+    background-color: #f8f9fa; /* Optional: background color */
+    font-weight: bold; /* Make genre bold */
+    margin: 0; /* Remove default margin */
+}
+
+.time {
+    margin: 0;
+    color: gray; /* Optional: make time text gray */
+}
