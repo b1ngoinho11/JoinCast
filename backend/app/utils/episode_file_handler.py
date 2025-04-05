@@ -179,7 +179,6 @@ def save_logs(room_id: str, speech_events: list, session_events: list, episode_i
     """
     import json
     
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     file_prefix = episode_id if episode_id else f"room_{room_id}"
     
     speech_filename = None
@@ -187,7 +186,7 @@ def save_logs(room_id: str, speech_events: list, session_events: list, episode_i
     
     # Save speech events
     if speech_events:
-        speech_filename = f"{LIVES_LOG_DIR}/recording_log_{file_prefix}_{timestamp}.json"
+        speech_filename = f"{LIVES_LOG_DIR}/recording_log_{file_prefix}.json"
         
         try:
             with open(speech_filename, 'w') as f:
@@ -205,7 +204,7 @@ def save_logs(room_id: str, speech_events: list, session_events: list, episode_i
     
     # Save session events
     if session_events:
-        session_filename = f"{SESSIONS_LOG_DIR}/session_log_{file_prefix}_{timestamp}.json"
+        session_filename = f"{SESSIONS_LOG_DIR}/session_log_{file_prefix}.json"
         
         try:
             with open(session_filename, 'w') as f:
