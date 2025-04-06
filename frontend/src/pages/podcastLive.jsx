@@ -31,12 +31,14 @@ export default function PodcastLive() {
   // State variables
   const [connectionStatus, setConnectionStatus] = useState("disconnected");
   const [isCallActive, setIsCallActive] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(true); // Add these new state variables inside the PodcastLive component
+  const [isSpeaker, setIsSpeaker] = useState(false);
+  const [pendingRequests, setPendingRequests] = useState([]);
+  const [speakerRequestStatus, setSpeakerRequestStatus] = useState(null); // null | 'pending' | 'approved' | 'declined'
   const [isSharing, setIsSharing] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState("00:00");
   const [isHost, setIsHost] = useState(false);
-  const [speakerRequestStatus, setSpeakerRequestStatus] = useState(null);
   const [participants, setParticipants] = useState([]);
   const [clientId, setClientId] = useState(null);
 
@@ -53,7 +55,6 @@ export default function PodcastLive() {
   const peerConnectionsRef = useRef({});
   const screenSharePeerConnectionsRef = useRef({});
   const participantsRef = useRef(new Map());
-  const pendingRequestsRef = useRef(new Map());
   const remoteStreamsRef = useRef(new Map());
   const screenShareStreamsRef = useRef(new Map());
 
@@ -79,7 +80,7 @@ export default function PodcastLive() {
       const response = await fetch("http://127.0.0.1:8000/api/v1/auth/me", {
         method: "GET",
         headers: {
-          "Authorization": `Bearer ${authToken}`,
+          Authorization: `Bearer ${authToken}`,
           "Content-Type": "application/json",
         },
       });
@@ -109,7 +110,13 @@ export default function PodcastLive() {
   };
 
   // Participant management
-  const addParticipant = (id, name, joinTime = Date.now()) => {
+  const addParticipant = (
+    id,
+    name,
+    joinTime = Date.now(),
+    isHost = false,
+    isSpeaker = false
+  ) => {
     if (!participantsRef.current.has(id)) {
       const newParticipant = {
         id,
@@ -119,6 +126,8 @@ export default function PodcastLive() {
         joinTime,
         leaveTime: null,
         totalSpeakingTime: 0,
+        isHost,
+        isSpeaker,
       };
       participantsRef.current.set(id, newParticipant);
       setParticipants(Array.from(participantsRef.current.values()));
@@ -163,7 +172,7 @@ export default function PodcastLive() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      console.log("API response:", data);
+      console.log("Episode data:", data);
       if (data.creator_id === clientId) {
         setIsHost(true);
       }
@@ -185,11 +194,13 @@ export default function PodcastLive() {
 
     wsRef.current.onopen = () => {
       setConnectionStatus("connected");
-      addParticipant(clientId, "You (Local)");
+      addParticipant(clientId, "You (Local)", Date.now(), isHost, isHost);
       wsRef.current.send(
         JSON.stringify({
           type: "user-joined",
           client_id: clientId,
+          isHost: isHost,
+          isSpeaker: isHost,
         })
       );
     };
@@ -240,13 +251,42 @@ export default function PodcastLive() {
         case "screen-share-stopped":
           handleScreenShareStopped(message);
           break;
-        case "speak-request":
+        case "speaker-request":
+          console.log("Speaker request received:", message);
           if (isHost) {
-            addPendingRequest(message.sender, message.timestamp);
+            setPendingRequests((prev) => [
+              ...prev,
+              {
+                id: message.sender,
+                timestamp: message.timestamp,
+              },
+            ]);
           }
           break;
-        case "speak-request-response":
-          handleRequestResponse(message);
+        case "speaker-request-response":
+          if (message.recipient === clientId) {
+            setSpeakerRequestStatus(message.approved ? "approved" : "declined");
+            if (message.approved) {
+              setIsSpeaker(true);
+              // Enable audio tracks when promoted to speaker
+              if (localStreamRef.current) {
+                localStreamRef.current.getAudioTracks().forEach((track) => {
+                  track.enabled = !isMuted;
+                });
+              }
+            }
+          }
+          break;
+        case "revoke-speaker":
+          if (message.recipient === clientId) {
+            setIsSpeaker(false);
+            // Disable audio tracks when demoted
+            if (localStreamRef.current) {
+              localStreamRef.current.getAudioTracks().forEach((track) => {
+                track.enabled = false;
+              });
+            }
+          }
           break;
       }
     };
@@ -254,7 +294,13 @@ export default function PodcastLive() {
 
   const handleUserJoined = (message) => {
     if (message.client_id !== clientId) {
-      addParticipant(message.client_id, message.client_id);
+      addParticipant(
+        message.client_id,
+        message.client_id,
+        Date.now(),
+        message.isHost || false,
+        message.isSpeaker || false
+      );
     }
   };
 
@@ -311,7 +357,10 @@ export default function PodcastLive() {
       screenSharePeerConnectionsRef.current[clientIdToRemove].close();
       delete screenSharePeerConnectionsRef.current[clientIdToRemove];
       screenShareStreamsRef.current.delete(clientIdToRemove);
-      if (screenShareVideoRef.current && screenShareStreamsRef.current.size === 0) {
+      if (
+        screenShareVideoRef.current &&
+        screenShareStreamsRef.current.size === 0
+      ) {
         screenShareVideoRef.current.srcObject = null;
       }
     }
@@ -421,7 +470,8 @@ export default function PodcastLive() {
         })
       );
       const screenSharePeerConnection = new RTCPeerConnection(configuration);
-      screenSharePeerConnectionsRef.current[clientId] = screenSharePeerConnection;
+      screenSharePeerConnectionsRef.current[clientId] =
+        screenSharePeerConnection;
       screenStreamRef.current.getTracks().forEach((track) => {
         screenSharePeerConnection.addTrack(track, screenStreamRef.current);
       });
@@ -481,6 +531,69 @@ export default function PodcastLive() {
       );
     }
   };
+  // Add these new functions inside the PodcastLive component
+  const requestToSpeak = () => {
+    if (!wsRef.current || !clientId) return;
+
+    wsRef.current.send(
+      JSON.stringify({
+        type: "speaker-request",
+        sender: clientId,
+        timestamp: Date.now(),
+      })
+    );
+
+    setSpeakerRequestStatus("pending");
+  };
+
+  const approveRequest = (requesterId) => {
+    if (!wsRef.current || !isHost) return;
+
+    wsRef.current.send(
+      JSON.stringify({
+        type: "speaker-request-response",
+        approved: true,
+        recipient: requesterId,
+        sender: clientId,
+      })
+    );
+
+    setPendingRequests((prev) => prev.filter((req) => req.id !== requesterId));
+  };
+
+  const declineRequest = (requesterId) => {
+    if (!wsRef.current || !isHost) return;
+
+    wsRef.current.send(
+      JSON.stringify({
+        type: "speaker-request-response",
+        approved: false,
+        recipient: requesterId,
+        sender: clientId,
+      })
+    );
+
+    setPendingRequests((prev) => prev.filter((req) => req.id !== requesterId));
+  };
+
+  const demoteSpeaker = (speakerId) => {
+    if (!wsRef.current || !isHost) return;
+  
+    wsRef.current.send(
+      JSON.stringify({
+        type: "revoke-speaker",
+        recipient: speakerId,
+        sender: clientId,
+      })
+    );
+  
+    // Update local state to reflect the change
+    setParticipants((prev) =>
+      prev.map((p) =>
+        p.id === speakerId ? { ...p, isSpeaker: false } : p
+      )
+    );
+  };
 
   // Recording
   const startRecording = async () => {
@@ -492,55 +605,64 @@ export default function PodcastLive() {
       // Create a new audio context
       const audioContext = new AudioContext();
       const destination = audioContext.createMediaStreamDestination();
-  
+
       // Create audio sources for all remote streams and connect them to destination
       remoteStreamsRef.current.forEach((remoteStream) => {
         if (remoteStream.getAudioTracks().length > 0) {
-          const remoteSource = audioContext.createMediaStreamSource(remoteStream);
+          const remoteSource =
+            audioContext.createMediaStreamSource(remoteStream);
           remoteSource.connect(destination);
           console.log("Added remote stream to recording");
         }
       });
-  
+
       // Add local audio stream if it exists
-      if (localStreamRef.current && localStreamRef.current.getAudioTracks().length > 0) {
-        const localSource = audioContext.createMediaStreamSource(localStreamRef.current);
+      if (
+        localStreamRef.current &&
+        localStreamRef.current.getAudioTracks().length > 0
+      ) {
+        const localSource = audioContext.createMediaStreamSource(
+          localStreamRef.current
+        );
         localSource.connect(destination);
         console.log("Added local stream to recording");
       }
-  
+
       // Create the final media stream
       const combinedStream = new MediaStream();
-      
+
       // Add all audio tracks from the destination
-      destination.stream.getAudioTracks().forEach(track => {
+      destination.stream.getAudioTracks().forEach((track) => {
         combinedStream.addTrack(track);
         console.log("Added audio track to combined stream");
       });
-  
+
       // Add screen share video if it exists
-      if (screenStreamRef.current && screenStreamRef.current.getVideoTracks().length > 0) {
-        screenStreamRef.current.getVideoTracks().forEach(track => {
+      if (
+        screenStreamRef.current &&
+        screenStreamRef.current.getVideoTracks().length > 0
+      ) {
+        screenStreamRef.current.getVideoTracks().forEach((track) => {
           combinedStream.addTrack(track);
           console.log("Added video track to combined stream");
         });
       }
-  
+
       // Log stream information
       console.log("Combined stream tracks:", combinedStream.getTracks().length);
       console.log("Audio tracks:", combinedStream.getAudioTracks().length);
       console.log("Video tracks:", combinedStream.getVideoTracks().length);
-  
+
       const mimeType = screenStreamRef.current
         ? "video/webm;codecs=vp8,opus"
         : "audio/webm;codecs=opus";
-  
+
       mediaRecorderRef.current = new MediaRecorder(combinedStream, {
         mimeType: mimeType,
         videoBitsPerSecond: 2500000,
         audioBitsPerSecond: 128000,
       });
-  
+
       const recordedChunks = [];
       mediaRecorderRef.current.ondataavailable = async (event) => {
         if (event.data.size > 0) {
@@ -559,19 +681,19 @@ export default function PodcastLive() {
           );
         }
       };
-  
+
       mediaRecorderRef.current.onstop = () => {
         const blob = new Blob(recordedChunks, { type: mimeType });
         const url = URL.createObjectURL(blob);
         console.log("Recording finished, blob URL:", url);
-        
+
         // Download the recording
         const a = document.createElement("a");
         a.href = url;
         a.download = `recording-${new Date().toISOString()}.webm`;
         a.click();
       };
-  
+
       // Start recording
       setIsRecording(true);
       const startTime = Date.now();
@@ -579,7 +701,7 @@ export default function PodcastLive() {
         const elapsed = Math.floor((Date.now() - startTime) / 1000);
         setRecordingTime(formatDuration(elapsed));
       }, 1000);
-  
+
       mediaRecorderRef.current.start(500);
       console.log("Recording started");
       wsRef.current.send(
@@ -611,14 +733,14 @@ export default function PodcastLive() {
   const createOffer = async () => {
     const peerConnection = new RTCPeerConnection(configuration);
     peerConnectionsRef.current[clientId] = peerConnection;
-    
+
     // Add local stream tracks
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((track) => {
         peerConnection.addTrack(track, localStreamRef.current);
       });
     }
-  
+
     // Handle incoming streams
     peerConnection.ontrack = (event) => {
       const stream = event.streams[0];
@@ -627,7 +749,7 @@ export default function PodcastLive() {
       audio.srcObject = stream;
       audio.play().catch((err) => console.error("Error playing audio:", err));
     };
-  
+
     peerConnection.onicecandidate = (event) => {
       if (event.candidate) {
         wsRef.current.send(
@@ -639,34 +761,34 @@ export default function PodcastLive() {
         );
       }
     };
-  
+
     const offer = await peerConnection.createOffer({
       offerToReceiveAudio: true,
       offerToReceiveVideo: false,
     });
-    
+
     await peerConnection.setLocalDescription(offer);
     return offer;
   };
-  
+
   // Modify the handleOffer function
   const handleOffer = async (message) => {
     const isScreenShare = message.streamType === "screen";
     const peerConnection = new RTCPeerConnection(configuration);
-  
+
     if (isScreenShare) {
       screenSharePeerConnectionsRef.current[message.sender] = peerConnection;
     } else {
       peerConnectionsRef.current[message.sender] = peerConnection;
     }
-  
+
     // Add local stream tracks if not screen share
     if (!isScreenShare && localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((track) => {
         peerConnection.addTrack(track, localStreamRef.current);
       });
     }
-  
+
     // Handle incoming tracks
     peerConnection.ontrack = (event) => {
       const stream = event.streams[0];
@@ -690,7 +812,7 @@ export default function PodcastLive() {
         audio.play().catch((err) => console.error("Error playing audio:", err));
       }
     };
-  
+
     // Handle ICE candidates
     peerConnection.onicecandidate = (event) => {
       if (event.candidate) {
@@ -705,16 +827,18 @@ export default function PodcastLive() {
         );
       }
     };
-  
-    await peerConnection.setRemoteDescription(new RTCSessionDescription(message.offer));
-    
+
+    await peerConnection.setRemoteDescription(
+      new RTCSessionDescription(message.offer)
+    );
+
     const answer = await peerConnection.createAnswer({
       offerToReceiveAudio: true,
       offerToReceiveVideo: isScreenShare,
     });
-    
+
     await peerConnection.setLocalDescription(answer);
-    
+
     wsRef.current.send(
       JSON.stringify({
         type: "answer",
@@ -743,75 +867,6 @@ export default function PodcastLive() {
       : peerConnectionsRef.current[message.sender];
     if (peerConnection) {
       await peerConnection.addIceCandidate(message.candidate);
-    }
-  };
-
-  // Speaker request system
-  const requestToSpeak = () => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(
-        JSON.stringify({
-          type: "request-to-speak",
-          timestamp: Date.now(),
-        })
-      );
-      setSpeakerRequestStatus("pending");
-    }
-  };
-
-  const approveRequest = () => {
-    const requests = Array.from(pendingRequestsRef.current.values());
-    if (requests.length > 0) {
-      const [firstRequest] = requests;
-      wsRef.current.send(
-        JSON.stringify({
-          type: "respond-to-request",
-          action: "approve",
-          requester_id: firstRequest.id,
-          timestamp: Date.now(),
-        })
-      );
-      pendingRequestsRef.current.delete(firstRequest.id);
-    }
-  };
-
-  const declineRequest = () => {
-    const requests = Array.from(pendingRequestsRef.current.values());
-    if (requests.length > 0) {
-      const [firstRequest] = requests;
-      wsRef.current.send(
-        JSON.stringify({
-          type: "respond-to-request",
-          action: "decline",
-          requester_id: firstRequest.id,
-          timestamp: Date.now(),
-        })
-      );
-      pendingRequestsRef.current.delete(firstRequest.id);
-    }
-  };
-
-  const addPendingRequest = (userId, timestamp) => {
-    if (!pendingRequestsRef.current.has(userId)) {
-      const request = { id: userId, timestamp };
-      pendingRequestsRef.current.set(userId, request);
-    }
-  };
-
-  const handleRequestResponse = (message) => {
-    pendingRequestsRef.current.delete(message.requester_id);
-    if (message.requester_id === clientId) {
-      if (message.action === "approve") {
-        setSpeakerRequestStatus("approved");
-        if (!localStreamRef.current) {
-          startCall();
-        }
-      } else {
-        setSpeakerRequestStatus("declined");
-      }
-      setTimeout(() => {
-        setSpeakerRequestStatus(null);
-      }, 5000);
     }
   };
 
@@ -864,41 +919,37 @@ export default function PodcastLive() {
     return speechDetectionIntervalRef.current;
   };
 
-  // Fetch user data on mount
+  // 1. Initialize clientId only once on mount
   useEffect(() => {
     const initialize = async () => {
       const id = await fetchUserData();
-      if (id) {
-        setClientId(id);
-      } else {
-        console.error("Initialization failed: No client ID retrieved");
-      }
+      if (id) setClientId(id);
     };
     initialize();
-  }, []);
+  }, []); // Empty dependency array - runs once on mount
 
-  // Proceed with room joining once clientId is set
+  // 2. When clientId is set, fetch episode data
   useEffect(() => {
-    const startPodcast = async () => {
-      if (clientId) {
-        await fetchEpisode();
-        await joinRoom();
-        await startCall();
-      }
-    };
-    startPodcast();
-    return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
-      stopCall();
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-      }
-    };
-  }, [clientId]); // Depend on clientId
+    if (!clientId) return;
 
-  const pendingRequests = Array.from(pendingRequestsRef.current.values());
+    const fetchData = async () => {
+      await fetchEpisode();
+    };
+    fetchData();
+  }, [clientId]); // Runs only when clientId changes
+
+  // 3. When isHost is determined, join room and start call
+  useEffect(() => {
+    if (isHost === null || !clientId) return; // Wait until we know host status
+
+    const setupCall = async () => {
+      console.log("Joining room as host:", isHost);
+      await joinRoom();
+      console.log("Starting call as host:", isHost);
+      await startCall();
+    };
+    setupCall();
+  }, [clientId, isHost]); // Runs when either changes
 
   return (
     <div className="flex flex-col items-center p-4 gap-4">
@@ -934,107 +985,94 @@ export default function PodcastLive() {
           <Card>
             <CardContent className="p-4 space-y-4">
               <div className="space-y-2">
-                <h3 className="font-semibold flex items-center gap-2">
-                  <Mic className="w-4 h-4" />
-                  Speaker Request
-                </h3>
-                <div className="flex gap-2">
-                  {!isHost && (
-                    <Button
-                      variant="outline"
-                      onClick={requestToSpeak}
-                      disabled={speakerRequestStatus !== null || !isCallActive}
-                    >
-                      Request to Speak
-                    </Button>
-                  )}
-                  {isHost && (
-                    <>
+                {!isHost && (
+                  <>
+                    <h3 className="font-semibold flex items-center gap-2">
+                      <Mic className="w-4 h-4" />
+                      Speaker Request
+                    </h3>
+                    <div className="flex gap-2">
                       <Button
                         variant="outline"
-                        className="text-green-600"
-                        onClick={approveRequest}
-                        disabled={pendingRequests.length === 0}
+                        onClick={requestToSpeak}
+                        disabled={
+                          speakerRequestStatus !== null || !isCallActive
+                        }
                       >
-                        <Check className="mr-2 h-4 w-4" />
-                        Approve
+                        Request to Speak
                       </Button>
-                      <Button
-                        variant="outline"
-                        className="text-red-600"
-                        onClick={declineRequest}
-                        disabled={pendingRequests.length === 0}
+                    </div>
+                    {speakerRequestStatus && (
+                      <div
+                        className={`flex items-center text-sm ${
+                          speakerRequestStatus === "pending"
+                            ? "text-yellow-600"
+                            : speakerRequestStatus === "approved"
+                            ? "text-green-600"
+                            : "text-red-600"
+                        }`}
                       >
-                        <X className="mr-2 h-4 w-4" />
-                        Decline
-                      </Button>
-                    </>
-                  )}
-                </div>
-                {speakerRequestStatus && (
-                  <div
-                    className={`flex items-center text-sm ${
-                      speakerRequestStatus === "pending"
-                        ? "text-yellow-600"
-                        : speakerRequestStatus === "approved"
-                        ? "text-green-600"
-                        : "text-red-600"
-                    }`}
-                  >
-                    <CircleDot className="mr-2 h-4 w-4 animate-pulse" />
-                    {speakerRequestStatus === "pending" && "Request sent"}
-                    {speakerRequestStatus === "approved" &&
-                      "Request approved - you can now speak"}
-                    {speakerRequestStatus === "declined" && "Request declined"}
-                  </div>
+                        <CircleDot className="mr-2 h-4 w-4 animate-pulse" />
+                        {speakerRequestStatus === "pending" && "Request sent"}
+                        {speakerRequestStatus === "approved" &&
+                          "Request approved - you can now speak"}
+                        {speakerRequestStatus === "declined" &&
+                          "Request declined"}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 
-              <div className="space-y-2">
-                <h3 className="font-semibold flex items-center gap-2">
-                  <Phone className="w-4 h-4" />
-                  Call Controls
-                </h3>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={toggleMute}
-                    disabled={!isCallActive}
-                  >
-                    {isMuted ? (
-                      <MicOff className="mr-2 h-4 w-4" />
-                    ) : (
-                      <Mic className="mr-2 h-4 w-4" />
-                    )}
-                    {isMuted ? "Unmute" : "Mute"}
-                  </Button>
+              {(isHost || isSpeaker) && (
+                <div className="space-y-2">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <Phone className="w-4 h-4" />
+                    Call Controls
+                  </h3>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={toggleMute}
+                      disabled={!isCallActive}
+                    >
+                      {isMuted ? (
+                        <MicOff className="mr-2 h-4 w-4" />
+                      ) : (
+                        <Mic className="mr-2 h-4 w-4" />
+                      )}
+                      {isMuted ? "Unmute" : "Mute"}
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="space-y-2">
-                <h3 className="font-semibold flex items-center gap-2">
-                  <ScreenShare className="w-4 h-4" />
-                  Screen Sharing
-                </h3>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={startScreenShare}
-                    disabled={isSharing || !isCallActive}
-                  >
-                    <ScreenShare className="mr-2 h-4 w-4" />
-                    Share Screen
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={stopScreenShare}
-                    disabled={!isSharing}
-                  >
-                    <MonitorOff className="mr-2 h-4 w-4" />
-                    Stop Sharing
-                  </Button>
+              {(isHost || isSpeaker) && (
+                <div className="space-y-2">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <ScreenShare className="w-4 h-4" />
+                    Screen Sharing
+                  </h3>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={startScreenShare}
+                      disabled={isSharing || !isCallActive}
+                    >
+                      <ScreenShare className="mr-2 h-4 w-4" />
+                      Share Screen
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={stopScreenShare}
+                      disabled={!isSharing}
+                    >
+                      <MonitorOff className="mr-2 h-4 w-4" />
+                      Stop Sharing
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {isHost && (
                 <div className="space-y-2">
@@ -1085,62 +1123,102 @@ export default function PodcastLive() {
         <div className="space-y-4">
           <Card>
             <CardContent className="p-4 space-y-4">
-              <h3 className="font-semibold flex items-center gap-2">
-                <UserPlus className="w-4 h-4" />
-                Participants ({participants.length})
-              </h3>
+              <div className="space-y-4">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <UserPlus className="w-4 h-4" />
+                  Participants ({participants.length})
+                </h3>
 
-              <div className="space-y-2">
-                {participants.map((participant) => (
-                  <div
-                    key={participant.id}
-                    className={`flex items-center p-2 rounded ${
-                      participant.isSpeaking
-                        ? "border-l-4 border-green-500 bg-green-50"
-                        : "bg-gray-50"
-                    }`}
-                  >
-                    <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center mr-2">
-                      {participant.name.charAt(0)}
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-medium">{participant.name}</div>
-                      <div className="text-xs text-gray-500">
-                        Joined:{" "}
-                        {new Date(participant.joinTime).toLocaleTimeString()}
-                      </div>
-                    </div>
-                    {participant.isSpeaking && (
-                      <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {isHost && pendingRequests.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  <h4 className="font-medium text-sm">
-                    Pending Speaker Requests
-                  </h4>
-                  {pendingRequests.map((request) => (
+                {/* Combined Participants Section */}
+                <div className="space-y-2">
+                  {participants.map((participant) => (
                     <div
-                      key={request.id}
-                      className="flex items-center p-2 rounded bg-yellow-50"
+                      key={participant.id}
+                      className={`flex items-center p-2 rounded ${
+                        participant.isSpeaking
+                          ? "border-l-4 border-green-500 bg-green-50"
+                          : "bg-gray-50"
+                      }`}
                     >
-                      <div className="w-8 h-8 rounded-full bg-yellow-500 text-white flex items-center justify-center mr-2">
-                        {request.id.charAt(0)}
+                      <div
+                        className={`w-8 h-8 rounded-full ${
+                          participant.isHost || participant.isSpeaker
+                            ? "bg-blue-600"
+                            : "bg-gray-500"
+                        } text-white flex items-center justify-center mr-2`}
+                      >
+                        {participant.name.charAt(0)}
                       </div>
                       <div className="flex-1">
-                        <div className="font-medium">{request.id}</div>
-                        <div className="text-xs text-gray-500">
-                          Requested:{" "}
-                          {new Date(request.timestamp).toLocaleTimeString()}
+                        <div className="font-medium">
+                          {participant.name}
+                          {participant.id === clientId && " (You)"}
+                        </div>
+                        <div className="text-xs text-gray-500 flex items-center gap-1">
+                          {participant.isHost && (
+                            <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">
+                              Host
+                            </span>
+                          )}
+                          {participant.isSpeaker && !participant.isHost && (
+                            <span className="bg-purple-100 text-purple-800 text-xs px-2 py-0.5 rounded">
+                              Speaker
+                            </span>
+                          )}
                         </div>
                       </div>
+                      {participant.isSpeaking && (
+                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                      )}
+                      {isHost &&
+                        !participant.isHost &&
+                        participant.isSpeaker && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-500 hover:text-red-700"
+                            onClick={() => {
+                              wsRef.current.send(
+                                JSON.stringify({
+                                  type: "revoke-speaker",
+                                  recipient: participant.id,
+                                  sender: clientId,
+                                })
+                              );
+                            }}
+                          >
+                            <MicOff className="h-4 w-4" />
+                          </Button>
+                        )}
+                      {isHost &&
+                        !participant.isHost &&
+                        !participant.isSpeaker &&
+                        pendingRequests.some(
+                          (req) => req.id === participant.id
+                        ) && (
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-green-500 hover:text-green-700"
+                              onClick={() => approveRequest(participant.id)}
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-500 hover:text-red-700"
+                              onClick={() => declineRequest(participant.id)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
                     </div>
                   ))}
                 </div>
-              )}
+              </div>
             </CardContent>
           </Card>
         </div>
