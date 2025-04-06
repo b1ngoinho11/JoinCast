@@ -99,12 +99,13 @@ class EpisodeRepository(BaseRepository[Episode]):
         db.refresh(db_obj)
         return db_obj
     
-    # def get_categories(self, db: Session) -> List[str]:
-    #     # Get all unique categories from the Episode table
-    #     categories = db.query(Episode).categories.distinct().all()
-    #     # Extract the category names from the result
-    #     categories = [category[0] for category in categories]
-    #     return categories
+    def get_categories(self, db: Session) -> List[str]:
+        # Get all unique categories from the Episode table as a list like ["Education", "Food"]
+        categories = db.query(Episode.categories).distinct().all()
+        # Flatten the list of tuples and remove duplicates
+        categories = list(set([category for sublist in categories for category in sublist]))
+        return categories
+        
     
     def get_by_category(self, db: Session, category: str) -> List[Episode]:
         episodes = db.query(Episode).filter(Episode.categories == category).all()

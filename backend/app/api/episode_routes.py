@@ -3,6 +3,7 @@ from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
+import logging
 
 from app.api.dependencies import get_db
 from app.models import Episode
@@ -15,6 +16,9 @@ import os
 from pathlib import Path
 
 THUMBNAIL_PICTURE_UPLOAD_DIR = Path("uploads/thumbnails")
+
+# Set up logger
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/episodes", tags=["episodes"])
 
@@ -59,13 +63,14 @@ def delete_episode(
         raise HTTPException(status_code=404, detail="Episode not found")
     episode_repository.delete(db, id=episode_id)
     
-# @router.get("/categories", response_model=List[str])
-# def get_episode_categories(
-#     db: Session = Depends(get_db)
-# ) -> List[str]:
-#     categories = episode_repository.get_categories(db)
-#     print(categories)
-#     return categories
+@router.get("/categories/names", response_model=List[str])
+def get_episode_categories_names(
+    db: Session = Depends(get_db)
+) -> List[str]:
+    categories = episode_repository.get_categories(db)
+    if not categories:
+        raise HTTPException(status_code=404, detail="No categories found")
+    return categories
 
 @router.get("/categories/{category}", response_model=List[EpisodeResponse])
 def get_episodes_by_category(
