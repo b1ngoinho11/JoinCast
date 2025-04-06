@@ -17,17 +17,20 @@ import {
   Circle,
 } from "lucide-react";
 
+const ROOM_ID = "33aa041b-500e-4b32-af0e-91a28ec7dd13";
+const CLIENT_ID = "16052527-2183-4141-9e89-7b7002ffd32f";
+
 export default function PodcastLive() {
   // State variables
-  const [roomId, setRoomId] = useState("");
   const [connectionStatus, setConnectionStatus] = useState("disconnected");
   const [isCallActive, setIsCallActive] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true); // Start with mute
   const [isSharing, setIsSharing] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState("00:00");
   const [isHost, setIsHost] = useState(false);
   const [speakerRequestStatus, setSpeakerRequestStatus] = useState(null);
+  const [participants, setParticipants] = useState([]);
 
   // Refs for WebRTC and media streams
   const wsRef = useRef(null);
@@ -37,7 +40,6 @@ export default function PodcastLive() {
   const timerIntervalRef = useRef(null);
   const screenShareVideoRef = useRef(null);
   const speechDetectionIntervalRef = useRef(null);
-  const [participants, setParticipants] = useState([]);
 
   // Data structures
   const peerConnectionsRef = useRef({});
@@ -46,10 +48,6 @@ export default function PodcastLive() {
   const pendingRequestsRef = useRef(new Map());
   const remoteStreamsRef = useRef(new Map());
   const screenShareStreamsRef = useRef(new Map());
-
-  const clientId = useRef(
-    `user_${Math.random().toString(36).substr(2, 9)}`
-  ).current;
 
   // ICE servers configuration
   const configuration = {
@@ -72,7 +70,6 @@ export default function PodcastLive() {
   };
 
   const showNotification = (message) => {
-    // In a real app, you might use a toast notification system
     console.log("Notification:", message);
   };
 
@@ -90,7 +87,6 @@ export default function PodcastLive() {
       };
 
       participantsRef.current.set(id, newParticipant);
-      // Update React state to trigger re-render
       setParticipants(Array.from(participantsRef.current.values()));
       showNotification(`${name} joined the room`);
     }
@@ -101,17 +97,13 @@ export default function PodcastLive() {
     if (participant) {
       participant.leaveTime = Date.now();
       participantsRef.current.set(id, participant);
-  
-      // Immediately remove from the UI
+
       participantsRef.current.delete(id);
       setParticipants(Array.from(participantsRef.current.values()));
-  
+
       showNotification(`${participant.name} left the room`);
-  
-      // Optional: Keep in memory for 60 seconds if needed for other logic
-      // (e.g., showing "recently left" status), but not in the UI
+
       setTimeout(() => {
-        // Cleanup if needed, but UI is already updated
         console.log(`Participant ${id} fully removed after delay`);
       }, 60000);
     }
@@ -126,24 +118,43 @@ export default function PodcastLive() {
     }
   };
 
+  // Fetch episode data
+  const fetchEpisode = async () => {
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:8000/api/v1/episodes/${ROOM_ID}`
+      );
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      console.log("API response:", data); // Log for debugging
+      if (data.creator_id === CLIENT_ID) {
+        setIsHost(true);
+      }
+    } catch (error) {
+      console.error("Error fetching episode:", error);
+      // Optionally handle error (e.g., show a notification to the user)
+    }
+  };
+
   // WebSocket and WebRTC functions
   const joinRoom = async () => {
-    if (!roomId) {
-      alert("Please enter a room ID");
-      return;
-    }
-
     setConnectionStatus("connecting");
-    setIsHost(participantsRef.current.size === 0);
 
-    // WebSocket connection
     wsRef.current = new WebSocket(
-      `ws://localhost:8000/api/v1/websocket/${roomId}/${clientId}`
+      `ws://localhost:8000/api/v1/websocket/${ROOM_ID}/${CLIENT_ID}`
     );
 
     wsRef.current.onopen = () => {
       setConnectionStatus("connected");
-      addParticipant(clientId, "You (Local)");
+      addParticipant(CLIENT_ID, "You (Local)");
+      wsRef.current.send(
+        JSON.stringify({
+          type: "user-joined",
+          client_id: CLIENT_ID,
+        })
+      );
     };
 
     wsRef.current.onclose = () => {
@@ -200,12 +211,13 @@ export default function PodcastLive() {
         case "speak-request-response":
           handleRequestResponse(message);
           break;
+        // Removed "host-assigned" case since host is now set via API
       }
     };
   };
 
   const handleUserJoined = (message) => {
-    if (message.client_id !== clientId) {
+    if (message.client_id !== CLIENT_ID) {
       addParticipant(message.client_id, message.client_id);
     }
   };
@@ -215,7 +227,7 @@ export default function PodcastLive() {
   };
 
   const handleScreenShareStarted = (message) => {
-    if (message.sender !== clientId) {
+    if (message.sender !== CLIENT_ID) {
       const participant = participantsRef.current.get(message.sender);
       if (participant) {
         participant.isScreenSharing = true;
@@ -225,9 +237,9 @@ export default function PodcastLive() {
       showNotification(`${message.sender} started screen sharing`);
     }
   };
-  
+
   const handleScreenShareStopped = (message) => {
-    if (message.sender !== clientId) {
+    if (message.sender !== CLIENT_ID) {
       const participant = participantsRef.current.get(message.sender);
       if (participant) {
         participant.isScreenSharing = false;
@@ -246,7 +258,7 @@ export default function PodcastLive() {
 
   const handleUsersList = (message) => {
     message.users.forEach((user) => {
-      if (user.id !== clientId) {
+      if (user.id !== CLIENT_ID) {
         addParticipant(user.id, user.id);
       }
     });
@@ -254,13 +266,13 @@ export default function PodcastLive() {
 
   const handleDisconnect = (message) => {
     const clientIdToRemove = message.client_id;
-  
+
     if (peerConnectionsRef.current[clientIdToRemove]) {
       peerConnectionsRef.current[clientIdToRemove].close();
       delete peerConnectionsRef.current[clientIdToRemove];
       remoteStreamsRef.current.delete(clientIdToRemove);
     }
-  
+
     if (screenSharePeerConnectionsRef.current[clientIdToRemove]) {
       screenSharePeerConnectionsRef.current[clientIdToRemove].close();
       delete screenSharePeerConnectionsRef.current[clientIdToRemove];
@@ -269,7 +281,7 @@ export default function PodcastLive() {
         screenShareVideoRef.current.srcObject = null;
       }
     }
-  
+
     removeParticipant(clientIdToRemove);
   };
 
@@ -287,15 +299,20 @@ export default function PodcastLive() {
         },
       });
 
+      // Start with audio muted
+      localStreamRef.current.getAudioTracks().forEach((track) => {
+        track.enabled = false;
+      });
+
       setIsCallActive(true);
-      detectSpeaking(localStreamRef.current, clientId);
+      detectSpeaking(localStreamRef.current, CLIENT_ID);
 
       const offer = await createOffer();
       wsRef.current.send(
         JSON.stringify({
           type: "offer",
           offer: offer,
-          sender: clientId,
+          sender: CLIENT_ID,
         })
       );
     } catch (error) {
@@ -333,7 +350,7 @@ export default function PodcastLive() {
     screenShareStreamsRef.current.clear();
 
     setIsCallActive(false);
-    setIsMuted(false);
+    setIsMuted(true); // Reset to muted on stop
   };
 
   const toggleMute = () => {
@@ -360,7 +377,6 @@ export default function PodcastLive() {
         audio: true,
       });
 
-      // Immediately display for the streamer
       if (screenShareVideoRef.current) {
         screenShareVideoRef.current.srcObject = screenStreamRef.current;
         screenShareVideoRef.current
@@ -369,18 +385,15 @@ export default function PodcastLive() {
       }
       setIsSharing(true);
 
-      // Notify all participants and create peer connections for each
       wsRef.current.send(
         JSON.stringify({
           type: "screen-share-started",
-          sender: clientId,
+          sender: CLIENT_ID,
         })
       );
 
-      // Create a peer connection for screen sharing
       const screenSharePeerConnection = new RTCPeerConnection(configuration);
-      screenSharePeerConnectionsRef.current[clientId] =
-        screenSharePeerConnection;
+      screenSharePeerConnectionsRef.current[CLIENT_ID] = screenSharePeerConnection;
 
       screenStreamRef.current.getTracks().forEach((track) => {
         screenSharePeerConnection.addTrack(track, screenStreamRef.current);
@@ -392,7 +405,7 @@ export default function PodcastLive() {
             JSON.stringify({
               type: "ice-candidate",
               candidate: event.candidate,
-              sender: clientId,
+              sender: CLIENT_ID,
               streamType: "screen",
             })
           );
@@ -406,7 +419,7 @@ export default function PodcastLive() {
         JSON.stringify({
           type: "offer",
           offer: offer,
-          sender: clientId,
+          sender: CLIENT_ID,
           streamType: "screen",
         })
       );
@@ -429,9 +442,9 @@ export default function PodcastLive() {
       screenStreamRef.current = null;
     }
 
-    if (screenSharePeerConnectionsRef.current[clientId]) {
-      screenSharePeerConnectionsRef.current[clientId].close();
-      delete screenSharePeerConnectionsRef.current[clientId];
+    if (screenSharePeerConnectionsRef.current[CLIENT_ID]) {
+      screenSharePeerConnectionsRef.current[CLIENT_ID].close();
+      delete screenSharePeerConnectionsRef.current[CLIENT_ID];
     }
 
     if (screenShareVideoRef.current) {
@@ -444,7 +457,7 @@ export default function PodcastLive() {
       wsRef.current.send(
         JSON.stringify({
           type: "screen-share-stopped",
-          sender: clientId,
+          sender: CLIENT_ID,
         })
       );
     }
@@ -476,11 +489,11 @@ export default function PodcastLive() {
         audioBitsPerSecond: 128000,
       });
 
-      const recordedChunks = []; // Store chunks locally for debugging
+      const recordedChunks = [];
 
       mediaRecorderRef.current.ondataavailable = async (event) => {
         if (event.data.size > 0) {
-          recordedChunks.push(event.data); // Save chunks for local verification
+          recordedChunks.push(event.data);
           const arrayBuffer = await event.data.arrayBuffer();
           const base64Data = btoa(
             String.fromCharCode.apply(null, new Uint8Array(arrayBuffer))
@@ -496,11 +509,10 @@ export default function PodcastLive() {
         }
       };
 
-      // Ensure the file is finalized properly
       mediaRecorderRef.current.onstop = () => {
         const blob = new Blob(recordedChunks, { type: mimeType });
         const url = URL.createObjectURL(blob);
-        console.log("Recording Blob URL:", url); // For debugging: download and test this blob
+        console.log("Recording Blob URL:", url);
       };
 
       setIsRecording(true);
@@ -539,7 +551,7 @@ export default function PodcastLive() {
   // WebRTC functions
   const createOffer = async () => {
     const peerConnection = new RTCPeerConnection(configuration);
-    peerConnectionsRef.current[clientId] = peerConnection;
+    peerConnectionsRef.current[CLIENT_ID] = peerConnection;
 
     localStreamRef.current.getTracks().forEach((track) => {
       peerConnection.addTrack(track, localStreamRef.current);
@@ -551,7 +563,7 @@ export default function PodcastLive() {
           JSON.stringify({
             type: "ice-candidate",
             candidate: event.candidate,
-            sender: clientId,
+            sender: CLIENT_ID,
           })
         );
       }
@@ -563,61 +575,66 @@ export default function PodcastLive() {
   };
 
   const handleOffer = async (message) => {
-    const isScreenShare = message.streamType === 'screen';
+    const isScreenShare = message.streamType === "screen";
     const peerConnection = new RTCPeerConnection(configuration);
-  
+
     if (isScreenShare) {
       screenSharePeerConnectionsRef.current[message.sender] = peerConnection;
     } else {
       peerConnectionsRef.current[message.sender] = peerConnection;
     }
-  
+
     if (!isScreenShare && localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(track => {
-        peerConnection.addTrack(track, localStreamRef.current);
-      });
+      localStreamRef.current.getTracks().forEach((track) =>
+        peerConnection.addTrack(track, localStreamRef.current)
+      );
     }
-  
+
     peerConnection.ontrack = (event) => {
       const stream = event.streams[0];
       if (isScreenShare) {
         screenShareStreamsRef.current.set(message.sender, stream);
         if (screenShareVideoRef.current) {
           screenShareVideoRef.current.srcObject = stream;
-          screenShareVideoRef.current.play().catch(err => console.error('Error playing remote stream:', err));
+          screenShareVideoRef.current
+            .play()
+            .catch((err) => console.error("Error playing remote stream:", err));
         }
-        setParticipants(prev => {
-          const updated = prev.map(p => 
+        setParticipants((prev) =>
+          prev.map((p) =>
             p.id === message.sender ? { ...p, isScreenSharing: true } : p
-          );
-          return updated;
-        });
+          )
+        );
       } else {
         remoteStreamsRef.current.set(message.sender, stream);
         const audio = new Audio();
         audio.srcObject = stream;
-        audio.play().catch(err => console.error('Error playing audio:', err));
+        audio.play().catch((err) => console.error("Error playing audio:", err));
       }
     };
-  
-    await peerConnection.setRemoteDescription(new RTCSessionDescription(message.offer));
+
+    await peerConnection.setRemoteDescription(
+      new RTCSessionDescription(message.offer)
+    );
     const answer = await peerConnection.createAnswer();
     await peerConnection.setLocalDescription(answer);
-  
-    wsRef.current.send(JSON.stringify({
-      type: 'answer',
-      answer: answer,
-      sender: clientId,
-      recipient: message.sender,
-      streamType: isScreenShare ? 'screen' : 'audio'
-    }));
+
+    wsRef.current.send(
+      JSON.stringify({
+        type: "answer",
+        answer: answer,
+        sender: CLIENT_ID,
+        recipient: message.sender,
+        streamType: isScreenShare ? "screen" : "audio",
+      })
+    );
   };
 
   const handleAnswer = async (message) => {
     const isScreenShare = message.streamType === "screen";
     const peerConnection = isScreenShare
-      ? screenSharePeerConnectionsRef.current[clientId]
-      : peerConnectionsRef.current[clientId];
+      ? screenSharePeerConnectionsRef.current[CLIENT_ID]
+      : peerConnectionsRef.current[CLIENT_ID];
 
     if (peerConnection) {
       await peerConnection.setRemoteDescription(message.answer);
@@ -691,7 +708,7 @@ export default function PodcastLive() {
   const handleRequestResponse = (message) => {
     pendingRequestsRef.current.delete(message.requester_id);
 
-    if (message.requester_id === clientId) {
+    if (message.requester_id === CLIENT_ID) {
       if (message.action === "approve") {
         setSpeakerRequestStatus("approved");
         if (!localStreamRef.current) {
@@ -764,8 +781,16 @@ export default function PodcastLive() {
     return speechDetectionIntervalRef.current;
   };
 
-  // Clean up on unmount
+  // Join room, fetch episode, and start call on mount; clean up on unmount
   useEffect(() => {
+    const initialize = async () => {
+      await fetchEpisode(); // Fetch episode first to set isHost
+      await joinRoom();
+      await startCall();
+    };
+
+    initialize();
+
     return () => {
       if (wsRef.current) {
         wsRef.current.close();
@@ -815,30 +840,6 @@ export default function PodcastLive() {
         <div className="lg:col-span-2 space-y-4">
           <Card>
             <CardContent className="p-4 space-y-4">
-              {/* Connection Section */}
-              <div className="space-y-2">
-                <h3 className="font-semibold flex items-center gap-2">
-                  <Phone className="w-4 h-4" />
-                  Connection
-                </h3>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={roomId}
-                    onChange={(e) => setRoomId(e.target.value)}
-                    placeholder="Enter room ID"
-                    className="flex-1 border rounded p-2 text-sm"
-                  />
-                  <Button
-                    onClick={joinRoom}
-                    disabled={connectionStatus !== "disconnected"}
-                  >
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Join Room
-                  </Button>
-                </div>
-              </div>
-
               {/* Speaker Request Section */}
               <div className="space-y-2">
                 <h3 className="font-semibold flex items-center gap-2">
@@ -904,18 +905,6 @@ export default function PodcastLive() {
                   Call Controls
                 </h3>
                 <div className="flex gap-2">
-                  <Button
-                    variant={isCallActive ? "default" : "outline"}
-                    onClick={isCallActive ? stopCall : startCall}
-                    disabled={connectionStatus !== "connected"}
-                  >
-                    {isCallActive ? (
-                      <PhoneOff className="mr-2 h-4 w-4" />
-                    ) : (
-                      <Phone className="mr-2 h-4 w-4" />
-                    )}
-                    {isCallActive ? "End Call" : "Start Call"}
-                  </Button>
                   <Button
                     variant="outline"
                     onClick={toggleMute}
