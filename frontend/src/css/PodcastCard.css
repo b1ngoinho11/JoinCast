@@ -1,7 +1,7 @@
 .cardBox {
     width: 357px;
     min-height: 260px;
-    max-height: 260px;
+    max-height: 360px;
     border: 1px solid #E5E5E5;
     border-radius: 10px;
     overflow: hidden;
