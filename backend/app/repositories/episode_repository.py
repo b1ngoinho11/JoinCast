@@ -88,5 +88,16 @@ class EpisodeRepository(BaseRepository[Episode]):
         db.delete(db_obj)
         db.commit()
         return db_obj
+    
+    def end_live(self, db: Session, *, id: str, creator_id:str) -> Live:
+        db_obj = db.query(Live).filter(Live.id == id).first()
+        if not db_obj:
+            raise ValueError(f"Live episode with id {id} does not exist.")
+        if db_obj.creator_id != creator_id:
+            raise ValueError(f"User with id {creator_id} is not the creator of this episode.")
+        db_obj.is_active = False
+        db.commit()
+        db.refresh(db_obj)
+        return db_obj
 
 episode_repository = EpisodeRepository(Episode)

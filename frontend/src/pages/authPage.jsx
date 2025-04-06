@@ -1,35 +1,59 @@
-import React, { useState } from 'react';
-import { Container, Row, Col, Form, Button, Card } from 'react-bootstrap';
+import { useState, useContext, useEffect } from 'react';
+import { Container, Row, Col, Form, Button, Card, Alert } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import '../css/auth.css';
 import { AuthContext } from '../contexts/authContext';
+import { authAPI } from '../services/api';
 
 export function LoginPage() {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { login } = React.useContext(AuthContext);
+  const { login, error: authError, loading: authLoading } = useContext(AuthContext);
 
-  const handleSubmit = (e) => {
+  // Update local error state when authError changes
+  useEffect(() => {
+    if (authError) {
+      setError(authError);
+    }
+  }, [authError]);
+
+  // Update local loading state when authLoading changes
+  useEffect(() => {
+    setLoading(authLoading);
+  }, [authLoading]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    login(true);
-    navigate('/');
+    setError('');
+    
+    try {
+      const success = await login({ email, password });
+      if (success) {
+        navigate('/');
+      }
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Login failed. Please try again.');
+    }
   };
 
   return (
-    <Container className=" background" fluid >
+    <Container className="background" fluid >
       <Row className="justify-content-center" style={{background: 'transparent'}}>
         <Col md={6} lg={4}>
           <Card className="p-4" style={{ marginTop: "20%", background: 'rgba(255, 255, 255, 0.5)'}}>
             <h2 className="text-center mb-4" style={{background:'transparent'}}>Login</h2>
+            {error && <Alert variant="danger">{error}</Alert>}
             <Form onSubmit={handleSubmit} >
-              <Form.Group className="mb-3" controlId="formUsername">
-                <Form.Label>Username</Form.Label>
+              <Form.Group className="mb-3" controlId="formEmail">
+                <Form.Label>Email</Form.Label>
                 <Form.Control
-                  type="text"
-                  placeholder="Enter username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  type="email"
+                  placeholder="Enter email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </Form.Group>
@@ -45,8 +69,8 @@ export function LoginPage() {
                 />
               </Form.Group>
 
-              <Button variant="primary" type="submit" className="w-100 mb-3">
-                Login
+              <Button variant="primary" type="submit" className="w-100 mb-3" disabled={loading}>
+                {loading ? 'Logging in...' : 'Login'}
               </Button>
               
               <div className="text-center">
@@ -61,21 +85,57 @@ export function LoginPage() {
 }
 
 export function SignupPage() {
-  const [username, setUsername] = useState('')
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login, error: authError } = useContext(AuthContext);
 
-  const handleSubmit = (e) => {
+  // Update local error state when authError changes
+  useEffect(() => {
+    if (authError) {
+      setError(authError);
+    }
+  }, [authError]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Add your signup logic here
+    setError('');
+    
+    // Validate form
     if (password !== confirmPassword) {
-      alert("Passwords don't match!");
+      setError("Passwords don't match!");
       return;
     }
-    alert('Signup functionality to be implemented');
-    navigate('/');
+
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+
+    setLoading(true);
+    
+    try {
+      // Register user
+      await authAPI.register({
+        username,
+        email,
+        password
+      });
+      
+      // Auto login after successful registration
+      const success = await login({ email, password });
+      if (success) {
+        navigate('/');
+      }
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Registration failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -84,6 +144,7 @@ export function SignupPage() {
         <Col md={6} lg={4}>
           <Card className="p-4" style={{marginTop: "20%", background: 'rgba(255, 255, 255, 0.5)'}}>
             <h2 className="text-center mb-4">Sign Up</h2>
+            {error && <Alert variant="danger">{error}</Alert>}
             <Form onSubmit={handleSubmit}>
               <Form.Group className='mb-3' controlId='formUsername'>
                 <Form.Label>Username</Form.Label>
@@ -93,8 +154,9 @@ export function SignupPage() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
-                  />
+                />
               </Form.Group>
+              
               <Form.Group className="mb-3" controlId="formEmail">
                 <Form.Label>Email address</Form.Label>
                 <Form.Control
@@ -128,8 +190,8 @@ export function SignupPage() {
                 />
               </Form.Group>
 
-              <Button variant="primary" type="submit" className="w-100 mb-3">
-                Sign Up
+              <Button variant="primary" type="submit" className="w-100 mb-3" disabled={loading}>
+                {loading ? 'Creating Account...' : 'Sign Up'}
               </Button>
               
               <div className="text-center">
