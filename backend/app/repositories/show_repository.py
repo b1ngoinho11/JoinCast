@@ -2,6 +2,7 @@
 from typing import Optional, List
 from sqlalchemy.orm import Session
 from app.models.show import Show
+from app.models.episode import Episode
 from app.repositories.base import BaseRepository
 from app.schemas.show import ShowCreate, ShowUpdate
 
@@ -27,6 +28,24 @@ class ShowRepository(BaseRepository[Show]):
         db.delete(db_obj)
         db.commit()
         return db_obj
+
+    def get_with_episodes(self, db: Session, *, id: str) -> Optional[Show]:
+        """Get a show with all its episodes."""
+        show = db.query(Show).filter(Show.id == id).first()
+        if not show:
+            return None
+        
+        # Episodes are already loaded through the relationship
+        # This is just to ensure we have the relationship loaded eagerly
+        return show
+    
+    def get_episodes(self, db: Session, *, id: str) -> List[Episode]:
+        """Get all episodes for a show."""
+        show = self.get(db, id=id)
+        if not show:
+            return []
+        
+        return show.episodes
 
 # Initialize the repository
 show_repository = ShowRepository(Show)

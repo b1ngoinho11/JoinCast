@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, EmailStr, field_validator, ConfigDict
 import uuid
 from datetime import datetime
@@ -41,7 +41,16 @@ class UserInDBBase(UserBase):
 
 # Properties to return via API
 class UserResponse(UserInDBBase):
+    # Will be referenced by other schemas but doesn't need to reference others
     pass
+
+# Minimal user response to avoid circular imports
+class UserMinimalResponse(BaseModel):
+    id: str
+    username: str
+    profile_picture: Optional[str] = None
+    
+    model_config = ConfigDict(from_attributes=True)
 
 # Properties stored in DB
 class UserInDB(UserInDBBase):

@@ -19,6 +19,7 @@ class Episode(BaseModel):
     creator_id = Column(String, ForeignKey("users.id"), nullable=False)
     thumbnail = Column(String, nullable=True)
     type = Column(String, nullable=False)
+    categories = Column(String, nullable=True)  # Add categories column
 
     # Relationships
     show = relationship("Show", back_populates="episodes")
@@ -57,7 +58,7 @@ class Recording(Episode):
     __tablename__ = None
     __mapper_args__ = {"polymorphic_identity": "recording"}
 
-    video = Column(String, nullable=True)
+    video = Column(String, nullable=True)  # This will store the filename of the uploaded video
     comments = Column(String, nullable=True)
 
     def __str__(self):
