@@ -15,7 +15,10 @@ import { AuthContext } from "../contexts/authContext";
 
 function NavbarDefault() {
   const [searchQuery, setSearchQuery] = React.useState("");
-  const { isLoggedIn, logout } = React.useContext(AuthContext);
+  const { isLoggedIn, logout, user } = React.useContext(AuthContext);
+
+  // API base URL for profile images - should match your backend
+  const API_URL = "http://localhost:8000/api/v1";
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -40,6 +43,17 @@ function NavbarDefault() {
       {children}
     </a>
   ));
+  
+  CustomToggle.displayName = 'CustomToggle';
+
+  // Function to get the user's profile picture URL
+  const getProfilePictureUrl = () => {
+    if (user && user.profile_picture) {
+      return `${API_URL}/users/profile-picture/${user.profile_picture}`;
+    }
+    // Return a default avatar if no profile picture is set
+    return "https://via.placeholder.com/40?text=User";
+  };
 
   return (
     <Navbar
@@ -105,7 +119,7 @@ function NavbarDefault() {
               <Dropdown align="end">
                 <Dropdown.Toggle as={CustomToggle}>
                   <img
-                    src="https://static1.srcdn.com/wordpress/wp-content/uploads/2024/04/img_0313.jpeg"
+                    src={getProfilePictureUrl()}
                     className="rounded-circle avatar"
                     alt="Avatar"
                   />
