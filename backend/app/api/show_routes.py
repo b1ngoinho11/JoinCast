@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.api.dependencies import get_db
 from app.models import Show
 from app.repositories.show_repository import show_repository
-from app.schemas.show import ShowCreate, ShowResponse, ShowUpdate
+from app.schemas.show import ShowCreate, ShowResponse, ShowUpdate, EpisodeResponse
 
 router = APIRouter(prefix="/api/v1/shows", tags=["shows"])
 
@@ -74,3 +74,21 @@ def get_show_by_name(
             detail="Show not found"
         )
     return show
+
+@router.get("/{show_id}/episodes", response_model=List[EpisodeResponse])
+def get_episodes_for_show(
+    show_id: str,
+    db: Session = Depends(get_db)
+) -> Any:
+    """
+    Get all episodes for a specific show.
+    """
+    show = show_repository.get(db, id=show_id)
+    if not show:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Show not found"
+        )
+    
+    # The episodes should already be loaded through the relationship
+    return show.episodes

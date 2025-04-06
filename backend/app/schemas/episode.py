@@ -1,11 +1,12 @@
 # app/schemas/episode.py
 from pydantic import BaseModel
 from typing import Optional, List
+from datetime import datetime
 
 class EpisodeBase(BaseModel):
     name: str
     show_id: str
-    thumbnail: Optional[str] = None
+    categories: Optional[str] = None  # Add categories field
 
 class EpisodeCreate(EpisodeBase):
     pass
@@ -13,12 +14,17 @@ class EpisodeCreate(EpisodeBase):
 class EpisodeUpdate(EpisodeBase):
     name: Optional[str] = None
     show_id: Optional[str] = None
+    thumbnail: Optional[str] = None  # Add thumbnail to update schema
+    categories: Optional[str] = None  # Make sure it's optional in updates too
 
 class EpisodeResponse(EpisodeBase):
     id: str
     creator_id: str
     type: str
-
+    thumbnail: Optional[str] = None  # Keep thumbnail in response
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
     class Config:
         from_attributes = True
 

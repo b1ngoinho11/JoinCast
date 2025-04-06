@@ -10,15 +10,16 @@ class EpisodeRepository(BaseRepository[Episode]):
         return db.query(Episode).filter(Episode.name == name).first()
 
     def create_recording(
-        self, db: Session, *, obj_in: RecordingCreate, creator_id: str
+        self, db: Session, *, obj_in: RecordingCreate, creator_id: str, thumbnail: Optional[str] = None
     ) -> Recording:
         db_obj = Recording(
             name=obj_in.name,
             show_id=obj_in.show_id,
             creator_id=creator_id,
-            thumbnail=obj_in.thumbnail,
+            thumbnail=thumbnail,
             video=obj_in.video,
             comments=obj_in.comments,
+            categories=obj_in.categories,
         )
         db.add(db_obj)
         db.commit()
@@ -34,6 +35,7 @@ class EpisodeRepository(BaseRepository[Episode]):
             creator_id=creator_id,
             thumbnail=obj_in.thumbnail,
             is_active=obj_in.is_active,
+            categories=obj_in.categories,  # Add categories field
         )
         db.add(db_obj)
         db.commit()
@@ -96,5 +98,16 @@ class EpisodeRepository(BaseRepository[Episode]):
         db.commit()
         db.refresh(db_obj)
         return db_obj
-
+    
+    # def get_categories(self, db: Session) -> List[str]:
+    #     # Get all unique categories from the Episode table
+    #     categories = db.query(Episode).categories.distinct().all()
+    #     # Extract the category names from the result
+    #     categories = [category[0] for category in categories]
+    #     return categories
+    
+    def get_by_category(self, db: Session, category: str) -> List[Episode]:
+        episodes = db.query(Episode).filter(Episode.categories == category).all()
+        return episodes
+    
 episode_repository = EpisodeRepository(Episode)

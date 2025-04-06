@@ -1,6 +1,7 @@
 # app/api/episode_routes.py
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_db
@@ -10,6 +11,10 @@ from app.schemas.episode import (
     EpisodeResponse, RecordingCreate, RecordingResponse,
     LiveCreate, LiveResponse, EpisodeUpdate
 )
+import os
+from pathlib import Path
+
+THUMBNAIL_PICTURE_UPLOAD_DIR = Path("uploads/thumbnails")
 
 router = APIRouter(prefix="/api/v1/episodes", tags=["episodes"])
 
@@ -54,3 +59,35 @@ def delete_episode(
         raise HTTPException(status_code=404, detail="Episode not found")
     episode_repository.delete(db, id=episode_id)
     
+# @router.get("/categories", response_model=List[str])
+# def get_episode_categories(
+#     db: Session = Depends(get_db)
+# ) -> List[str]:
+#     categories = episode_repository.get_categories(db)
+#     print(categories)
+#     return categories
+
+@router.get("/categories/{category}", response_model=List[EpisodeResponse])
+def get_episodes_by_category(
+    category: str,
+    db: Session = Depends(get_db)
+) -> List[EpisodeResponse]:
+    episodes = episode_repository.get_by_category(db, category=category)
+    if not episodes:
+        raise HTTPException(status_code=404, detail="No episodes found for this category")
+    return episodes
+
+@router.get("/thumbnail/{filename}", response_class=FileResponse)
+async def get_thumbnail_picture(filename: str):
+    file_path = THUMBNAIL_PICTURE_UPLOAD_DIR / filename
+    
+    # Check if the file exists
+    if not os.path.isfile(file_path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Thumbnail picture not found"
+        )
+    
+    return FileResponse(file_path)
+
+

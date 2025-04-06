@@ -19,6 +19,7 @@ class Episode(BaseModel):
     creator_id = Column(String, ForeignKey("users.id"), nullable=False)
     thumbnail = Column(String, nullable=True)
     type = Column(String, nullable=False)
+    categories = Column(String, nullable=True)  # Add categories column
 
     # Relationships
     show = relationship("Show", back_populates="episodes")
