@@ -3,6 +3,8 @@ from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 from pathlib import Path
+from fastapi.responses import FileResponse
+import os
 
 from app.api.dependencies import get_db
 from app.models import User
@@ -140,3 +142,19 @@ async def delete_profile_picture(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Could not delete profile picture"
         )
+
+@router.get("/profile-picture/{filename}", response_class=FileResponse)
+async def get_profile_picture(filename: str):
+    """
+    Serve a user's profile picture by filename.
+    """
+    file_path = PROFILE_PICTURE_UPLOAD_DIR / filename
+    
+    # Check if the file exists
+    if not os.path.isfile(file_path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Profile picture not found"
+        )
+    
+    return FileResponse(file_path)
