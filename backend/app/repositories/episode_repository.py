@@ -10,14 +10,14 @@ class EpisodeRepository(BaseRepository[Episode]):
         return db.query(Episode).filter(Episode.name == name).first()
 
     def create_recording(
-        self, db: Session, *, obj_in: RecordingCreate, creator_id: str, thumbnail: Optional[str] = None
+        self, db: Session, *, obj_in: RecordingCreate, creator_id: str, thumbnail: Optional[str] = None, video: Optional[str] = None
     ) -> Recording:
         db_obj = Recording(
             name=obj_in.name,
             show_id=obj_in.show_id,
             creator_id=creator_id,
             thumbnail=thumbnail,
-            video=obj_in.video,
+            video=video,  # This will now be the filename of the uploaded video
             comments=obj_in.comments,
             categories=obj_in.categories,
         )

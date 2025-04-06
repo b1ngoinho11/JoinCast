@@ -20,6 +20,7 @@ class EpisodeUpdate(EpisodeBase):
     show_id: Optional[str] = None
     thumbnail: Optional[str] = None
     categories: Optional[str] = None
+    comments: Optional[str] = None
 
 class EpisodeResponse(EpisodeBase):
     id: str
@@ -34,8 +35,9 @@ class EpisodeResponse(EpisodeBase):
     model_config = ConfigDict(from_attributes=True)
 
 class RecordingCreate(EpisodeCreate):
-    video: Optional[str] = None
+    # video: Optional[str] = None
     comments: Optional[str] = None
+    # pass
 
 class RecordingUpdate(EpisodeUpdate):
     video: Optional[str] = None

@@ -58,7 +58,7 @@ class Recording(Episode):
     __tablename__ = None
     __mapper_args__ = {"polymorphic_identity": "recording"}
 
-    video = Column(String, nullable=True)
+    video = Column(String, nullable=True)  # This will store the filename of the uploaded video
     comments = Column(String, nullable=True)
 
     def __str__(self):

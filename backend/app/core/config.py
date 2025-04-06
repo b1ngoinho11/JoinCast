@@ -67,6 +67,10 @@ class Settings(BaseSettings):
     MAX_THUMBNAIL_SIZE: int = 10 * 1024 * 1024  # 10MB
     ALLOWED_THUMBNAIL_TYPES: List[str] = ["image/jpeg", "image/png", "image/gif"]
     
+    # recording video settings
+    MAX_VIDEO_SIZE: int = 500 * 1024 * 1024  # 500MB
+    ALLOWED_VIDEO_TYPES: List[str] = ["video/mp4", "video/x-ms-wmv", "video/x-msvideo", "video/x-flv", "video/quicktime"]
+    
     class Config:
         env_file = ".env"
         case_sensitive = True
