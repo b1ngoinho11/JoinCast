@@ -121,3 +121,5 @@ dmypy.json
 
 # Uploads directory
 uploads/
+
+episodes/

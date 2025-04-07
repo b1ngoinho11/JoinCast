@@ -27,13 +27,13 @@ class EpisodeRepository(BaseRepository[Episode]):
         return db_obj
 
     def create_live(
-        self, db: Session, *, obj_in: LiveCreate, creator_id: str
+        self, db: Session, *, obj_in: LiveCreate, creator_id: str, thumbnail: Optional[str] = None
     ) -> Live:
         db_obj = Live(
             name=obj_in.name,
             show_id=obj_in.show_id,
             creator_id=creator_id,
-            thumbnail=obj_in.thumbnail,
+            thumbnail=thumbnail,
             is_active=obj_in.is_active,
             categories=obj_in.categories,  # Add categories field
         )
