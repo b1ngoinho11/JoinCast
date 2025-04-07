@@ -12,12 +12,14 @@ RECORDING_DIR = "episodes/recordings"
 LIVES_DIR = "episodes/lives"
 LIVES_LOG_DIR = "episodes/live_logs"
 SESSIONS_LOG_DIR = "episodes/session_logs"
+LIVE_COMMENTS_LOG_DIR = "episodes/live_comments_logs"
 
 # Create directories if they don't exist
 os.makedirs(RECORDING_DIR, exist_ok=True)
 os.makedirs(LIVES_DIR, exist_ok=True)
 os.makedirs(LIVES_LOG_DIR, exist_ok=True)
 os.makedirs(SESSIONS_LOG_DIR, exist_ok=True)
+os.makedirs(LIVE_COMMENTS_LOG_DIR, exist_ok=True)
 
 ALLOWED_AUDIO_TYPES = ['audio/mp3', 'audio/mpeg', 'audio/wav', 'audio/ogg']
 ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/ogg']
@@ -284,4 +286,36 @@ def stop_live_recording(recording_info: Dict) -> str:
         return recording_info['final_filename']
     except Exception as e:
         print(f"Error processing recording: {e}")
+        return None
+    
+def save_chat_logs(room_id: str, chat_messages: list, episode_id: Optional[str] = None) -> str:
+    """
+    Save chat messages to a JSON file.
+    
+    Args:
+        room_id: The room ID
+        chat_messages: List of chat messages
+        episode_id: The episode ID (optional)
+        
+    Returns:
+        Path to the chat log file
+    """
+    import json
+    
+    file_prefix = episode_id if episode_id else f"room_{room_id}"
+    chat_filename = f"{LIVE_COMMENTS_LOG_DIR}/chat_log_{file_prefix}.json"
+    
+    try:
+        with open(chat_filename, 'w') as f:
+            json.dump({
+                "room_id": room_id,
+                "episode_id": episode_id,
+                "session_end": datetime.now().isoformat(),
+                "messages": chat_messages
+            }, f, indent=2)
+        
+        print(f"Chat log saved: {chat_filename}")
+        return chat_filename
+    except Exception as e:
+        print(f"Error saving chat log: {e}")
         return None

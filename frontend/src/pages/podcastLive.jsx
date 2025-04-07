@@ -12,6 +12,7 @@ import {
   X,
   CircleDot,
   Hand,
+  MessageSquare,
 } from "lucide-react";
 
 const ROOM_ID = "33aa041b-500e-4b32-af0e-91a28ec7dd13";
@@ -54,6 +55,11 @@ export default function PodcastLive() {
   const participantsRef = useRef(new Map());
   const remoteStreamsRef = useRef(new Map());
   const screenShareStreamsRef = useRef(new Map());
+
+  // Chat state
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+  const chatContainerRef = useRef(null);
 
   // ICE servers configuration
   const configuration = {
@@ -284,6 +290,16 @@ export default function PodcastLive() {
               });
             }
           }
+          break;
+        case "chat-message":
+          setChatMessages((prev) => [
+            ...prev,
+            {
+              sender: message.message.sender,
+              content: message.message.content,
+              timestamp: message.message.timestamp,
+            },
+          ]);
           break;
       }
     };
@@ -546,7 +562,7 @@ export default function PodcastLive() {
 
   const approveRequest = (requesterId) => {
     if (!wsRef.current || !isHost) return;
-  
+
     const timestamp = Date.now();
     wsRef.current.send(
       JSON.stringify({
@@ -557,13 +573,13 @@ export default function PodcastLive() {
         timestamp: timestamp,
       })
     );
-  
+
     setPendingRequests((prev) => prev.filter((req) => req.id !== requesterId));
   };
 
   const declineRequest = (requesterId) => {
     if (!wsRef.current || !isHost) return;
-  
+
     const timestamp = Date.now();
     wsRef.current.send(
       JSON.stringify({
@@ -574,13 +590,13 @@ export default function PodcastLive() {
         timestamp: timestamp,
       })
     );
-  
+
     setPendingRequests((prev) => prev.filter((req) => req.id !== requesterId));
   };
 
   const demoteSpeaker = (speakerId) => {
     if (!wsRef.current || !isHost) return;
-  
+
     const timestamp = Date.now();
     wsRef.current.send(
       JSON.stringify({
@@ -590,11 +606,9 @@ export default function PodcastLive() {
         timestamp: timestamp,
       })
     );
-  
+
     setParticipants((prev) =>
-      prev.map((p) =>
-        p.id === speakerId ? { ...p, isSpeaker: false } : p
-      )
+      prev.map((p) => (p.id === speakerId ? { ...p, isSpeaker: false } : p))
     );
   };
 
@@ -922,6 +936,19 @@ export default function PodcastLive() {
     return speechDetectionIntervalRef.current;
   };
 
+  const sendChatMessage = () => {
+    if (!chatInput.trim() || !wsRef.current || !clientId) return;
+
+    const message = {
+      type: "chat-message",
+      sender: clientId,
+      content: chatInput.trim(),
+      timestamp: Date.now(),
+    };
+    wsRef.current.send(JSON.stringify(message));
+    setChatInput("");
+  };
+
   // 1. Initialize clientId only once on mount
   useEffect(() => {
     const initialize = async () => {
@@ -953,6 +980,13 @@ export default function PodcastLive() {
     };
     setupCall();
   }, [clientId, isHost]); // Runs when either changes
+
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop =
+        chatContainerRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
 
   return (
     <div className="flex flex-col items-center p-4 gap-4 min-h-screen">
@@ -1031,30 +1065,30 @@ export default function PodcastLive() {
                       )}
                     </div>
                   </div>
-                  {isHost &&
-                    !participant.isHost &&
-                    participant.isSpeaker && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-red-500 hover:text-red-700"
-                        onClick={() => {
-                          wsRef.current.send(
-                            JSON.stringify({
-                              type: "revoke-speaker",
-                              recipient: participant.id,
-                              sender: clientId,
-                            })
-                          );
-                        }}
-                      >
-                        <MicOff className="h-4 w-4" />
-                      </Button>
-                    )}
+                  {isHost && !participant.isHost && participant.isSpeaker && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-500 hover:text-red-700"
+                      onClick={() => {
+                        wsRef.current.send(
+                          JSON.stringify({
+                            type: "revoke-speaker",
+                            recipient: participant.id,
+                            sender: clientId,
+                          })
+                        );
+                      }}
+                    >
+                      <MicOff className="h-4 w-4" />
+                    </Button>
+                  )}
                   {isHost &&
                     !participant.isHost &&
                     !participant.isSpeaker &&
-                    pendingRequests.some((req) => req.id === participant.id) && (
+                    pendingRequests.some(
+                      (req) => req.id === participant.id
+                    ) && (
                       <div className="flex gap-1">
                         <Button
                           variant="ghost"
@@ -1076,6 +1110,54 @@ export default function PodcastLive() {
                     )}
                 </div>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Chat section */}
+        <Card className="md:col-span-1">
+          <CardContent className="p-6 flex flex-col h-[400px]">
+            <h3 className="font-semibold flex items-center gap-2 mb-4">
+              <MessageSquare className="w-5 h-5" />
+              Live Chat
+            </h3>
+            <div
+              ref={chatContainerRef}
+              className="flex-1 overflow-y-auto mb-4 space-y-2"
+            >
+              {chatMessages.map((msg, index) => (
+                <div
+                  key={index}
+                  className={`text-sm ${
+                    msg.sender === clientId ? "text-right" : "text-left"
+                  }`}
+                >
+                  <span className="font-medium">
+                    {msg.sender === clientId ? "You" : msg.sender}:
+                  </span>{" "}
+                  <span>{msg.content}</span>
+                  <div className="text-xs text-gray-500">
+                    {new Date(msg.timestamp).toLocaleTimeString()}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && sendChatMessage()}
+                placeholder="Type a message..."
+                className="flex-1 p-2 border rounded"
+                disabled={!isCallActive}
+              />
+              <Button
+                onClick={sendChatMessage}
+                disabled={!isCallActive || !chatInput.trim()}
+              >
+                Send
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -1118,7 +1200,8 @@ export default function PodcastLive() {
                       {speakerRequestStatus === "pending" && "Request sent"}
                       {speakerRequestStatus === "approved" &&
                         "Request approved - you can now speak"}
-                      {speakerRequestStatus === "declined" && "Request declined"}
+                      {speakerRequestStatus === "declined" &&
+                        "Request declined"}
                     </div>
                   )}
                 </div>

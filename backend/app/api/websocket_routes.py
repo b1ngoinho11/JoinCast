@@ -163,6 +163,14 @@ async def websocket_endpoint(
                 )
                 await manager.broadcast_to_room(data, room_id, user_id)
                 
+            elif message['type'] == 'chat-message':
+                chat_message = {
+                    "sender": message['sender'],
+                    "content": message['content'],
+                    "timestamp": message.get('timestamp')
+                }
+                await manager.broadcast_chat_message(room_id, chat_message)    
+            
             else:
                 await manager.broadcast_to_room(data, room_id, user_id)
                 

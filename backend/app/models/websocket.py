@@ -3,7 +3,7 @@ from fastapi import WebSocket
 from typing import Dict, Set, List, Optional
 from datetime import datetime
 import json
-from app.utils.episode_file_handler import start_live_recording, add_audio_chunk, stop_live_recording, save_logs, add_video_chunk
+from app.utils.episode_file_handler import start_live_recording, add_audio_chunk, stop_live_recording, save_logs, add_video_chunk, save_chat_logs
 
 class ConnectionManager:
     def __init__(self):
@@ -14,6 +14,7 @@ class ConnectionManager:
         self.session_events: Dict[str, List[dict]] = {}  # Room ID -> list of session events (join/leave)
         self.episode_mappings: Dict[str, str] = {}  # Room ID -> Episode ID
         self.screen_sharers: Dict[str, str] = {}  # Room ID -> User ID
+        self.chat_messages: Dict[str, List[dict]] = {}  # Room ID -> list of chat messages
 
     async def connect(self, websocket: WebSocket, client_id: str, room_id: str):
         await websocket.accept()
@@ -46,6 +47,9 @@ class ConnectionManager:
             "type": "users-list",
             "users": users
         }))
+        
+        if room_id not in self.chat_messages:
+            self.chat_messages[room_id] = []
 
     def disconnect(self, client_id: str, room_id: str):
         self.active_connections.pop(client_id, None)
@@ -64,6 +68,11 @@ class ConnectionManager:
                     self._save_logs(room_id)
                     self.speech_events.pop(room_id)
                     self.session_events.pop(room_id, None)
+                    
+                # Save chat messages when room is emptied
+                if room_id in self.chat_messages:
+                    self._save_chat_logs(room_id)
+                    self.chat_messages.pop(room_id)
 
     def _save_logs(self, room_id: str):
         """Save speech and session events to JSON files when a room is closed"""
@@ -167,5 +176,26 @@ class ConnectionManager:
     
     def clear_screen_sharer(self, room_id: str):
         self.screen_sharers.pop(room_id, None)
+        
+    def _save_chat_logs(self, room_id: str):
+        """Save chat messages to a JSON file when a room is closed"""
+        episode_id = self.episode_mappings.get(room_id)
+        save_chat_logs(room_id, self.chat_messages.get(room_id, []), episode_id)
+
+    async def broadcast_chat_message(self, room_id: str, message: dict):
+        """Broadcast chat message to all users in a room and store it"""
+        if room_id not in self.chat_messages:
+            self.chat_messages[room_id] = []
+        
+        self.chat_messages[room_id].append(message)
+        
+        if room_id in self.rooms:
+            message_json = json.dumps({
+                "type": "chat-message",
+                "message": message
+            })
+            for client_id in self.rooms[room_id]:
+                if client_id in self.active_connections:
+                    await self.active_connections[client_id].send_text(message_json)
         
 manager = ConnectionManager()
