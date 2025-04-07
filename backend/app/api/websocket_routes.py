@@ -128,6 +128,41 @@ async def websocket_endpoint(
                     user_id
                 )
                 
+            elif message['type'] == 'speaker-request':
+                # Log speaker request in session events
+                manager.record_session_event(
+                    room_id,
+                    message['type'],
+                    message['sender'],
+                    message.get('timestamp')
+                )
+                await manager.broadcast_to_room(data, room_id, user_id)
+            
+            elif message['type'] == 'speaker-request-response':
+                # Log speaker request response in session events
+                manager.record_session_event(
+                    room_id,
+                    message['type'],
+                    message['sender'],
+                    message.get('timestamp'),
+                    {
+                        "recipient": message['recipient'],
+                        "approved": message['approved']
+                    }
+                )
+                await manager.broadcast_to_room(data, room_id, user_id)
+            
+            elif message['type'] == 'revoke-speaker':
+                # Log revoke speaker event in session events
+                manager.record_session_event(
+                    room_id,
+                    message['type'],
+                    message['sender'],
+                    message.get('timestamp'),
+                    {"recipient": message['recipient']}
+                )
+                await manager.broadcast_to_room(data, room_id, user_id)
+                
             else:
                 await manager.broadcast_to_room(data, room_id, user_id)
                 

@@ -25,13 +25,9 @@ class ConnectionManager:
         
         self.rooms[room_id].add(client_id)
         
-        # Record join event
-        join_event = {
-            "type": "join",
-            "client_id": client_id,
-            "timestamp": datetime.now().timestamp() * 1000  # milliseconds
-        }
-        self.session_events[room_id].append(join_event)
+        # Record join event using the new method
+        timestamp = datetime.now().timestamp() * 1000
+        join_event = self.record_session_event(room_id, "join", client_id, timestamp)
         
         # Notify everyone in the room about the new user
         await self.broadcast_to_room(
@@ -54,14 +50,10 @@ class ConnectionManager:
     def disconnect(self, client_id: str, room_id: str):
         self.active_connections.pop(client_id, None)
         if room_id in self.rooms:
-            # Record leave event
+            # Record leave event using the new method
             if room_id in self.session_events:
-                leave_event = {
-                    "type": "leave",
-                    "client_id": client_id,
-                    "timestamp": datetime.now().timestamp() * 1000  # milliseconds
-                }
-                self.session_events[room_id].append(leave_event)
+                timestamp = datetime.now().timestamp() * 1000
+                self.record_session_event(room_id, "leave", client_id, timestamp)
             
             self.rooms[room_id].discard(client_id)
             if not self.rooms[room_id]:
@@ -82,6 +74,24 @@ class ConnectionManager:
             self.session_events.get(room_id, []),
             episode_id
         )
+    
+    def record_session_event(self, room_id: str, event_type: str, client_id: str, 
+                          timestamp: float, additional_data: Optional[dict] = None):
+        """Record a generic session event"""
+        if room_id not in self.session_events:
+            self.session_events[room_id] = []
+            
+        event = {
+            "type": event_type,
+            "client_id": client_id,
+            "timestamp": timestamp
+        }
+        
+        if additional_data:
+            event.update(additional_data)
+            
+        self.session_events[room_id].append(event)
+        return event
 
     def record_speech_event(self, room_id: str, client_id: str, is_speaking: bool, 
                           timestamp: float, speaking_start: float = None):

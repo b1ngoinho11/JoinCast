@@ -38,7 +38,7 @@ export default function PodcastLive() {
   const [isSharing, setIsSharing] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState("00:00");
-  const [isHost, setIsHost] = useState(false);
+  const [isHost, setIsHost] = useState(null);
   const [participants, setParticipants] = useState([]);
   const [clientId, setClientId] = useState(null);
 
@@ -535,11 +535,12 @@ export default function PodcastLive() {
   const requestToSpeak = () => {
     if (!wsRef.current || !clientId) return;
 
+    const timestamp = Date.now();
     wsRef.current.send(
       JSON.stringify({
         type: "speaker-request",
         sender: clientId,
-        timestamp: Date.now(),
+        timestamp: timestamp,
       })
     );
 
@@ -548,46 +549,51 @@ export default function PodcastLive() {
 
   const approveRequest = (requesterId) => {
     if (!wsRef.current || !isHost) return;
-
+  
+    const timestamp = Date.now();
     wsRef.current.send(
       JSON.stringify({
         type: "speaker-request-response",
         approved: true,
         recipient: requesterId,
         sender: clientId,
+        timestamp: timestamp,
       })
     );
-
+  
     setPendingRequests((prev) => prev.filter((req) => req.id !== requesterId));
   };
 
   const declineRequest = (requesterId) => {
     if (!wsRef.current || !isHost) return;
-
+  
+    const timestamp = Date.now();
     wsRef.current.send(
       JSON.stringify({
         type: "speaker-request-response",
         approved: false,
         recipient: requesterId,
         sender: clientId,
+        timestamp: timestamp,
       })
     );
-
+  
     setPendingRequests((prev) => prev.filter((req) => req.id !== requesterId));
   };
 
   const demoteSpeaker = (speakerId) => {
     if (!wsRef.current || !isHost) return;
   
+    const timestamp = Date.now();
     wsRef.current.send(
       JSON.stringify({
         type: "revoke-speaker",
         recipient: speakerId,
         sender: clientId,
+        timestamp: timestamp,
       })
     );
   
-    // Update local state to reflect the change
     setParticipants((prev) =>
       prev.map((p) =>
         p.id === speakerId ? { ...p, isSpeaker: false } : p
@@ -940,7 +946,7 @@ export default function PodcastLive() {
 
   // 3. When isHost is determined, join room and start call
   useEffect(() => {
-    if (isHost === null || !clientId) return; // Wait until we know host status
+    if (isHost === !clientId) return; // Wait until we know host status
 
     const setupCall = async () => {
       console.log("Joining room as host:", isHost);
