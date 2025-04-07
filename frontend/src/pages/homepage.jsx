@@ -177,24 +177,28 @@ const HomePage = () => {
             ))}
           </Row>
 
-          <Button
-            variant="dark"
-            className="scroll-button left"
-            onClick={() => handleScroll(trendingPodcastScroll, -400)}
-          >
-            <IoIosArrowBack
-              style={{ background: "transparent", color: "black" }}
-            />
-          </Button>
-          <Button
-            variant="dark"
-            className="scroll-button right"
-            onClick={() => handleScroll(trendingPodcastScroll, 400)}
-          >
-            <IoIosArrowForward
-              style={{ background: "transparent", color: "black" }}
-            />
-          </Button>
+          {watchNowPodcasts.length > 3 && (
+          <>
+            <Button
+              variant="dark"
+              className="scroll-button left"
+              onClick={() => handleScroll(trendingPodcastScroll, -400)}
+            >
+              <IoIosArrowBack
+                style={{ background: "transparent", color: "black" }}
+              />
+            </Button>
+            <Button
+              variant="dark"
+              className="scroll-button right"
+              onClick={() => handleScroll(trendingPodcastScroll, 400)}
+            >
+              <IoIosArrowForward
+                style={{ background: "transparent", color: "black" }}
+              />
+            </Button>
+          </>
+        )}
         </div>
 
         <h2 className="my-4 text-left">Now Live</h2>
@@ -215,24 +219,28 @@ const HomePage = () => {
             ))}
           </Row>
 
-          <Button
-            variant="dark"
-            className="scroll-button left"
-            onClick={() => handleScroll(nowLivePodcastScroll, -400)}
-          >
-            <IoIosArrowBack
-              style={{ background: "transparent", color: "black" }}
-            />
-          </Button>
-          <Button
-            variant="dark"
-            className="scroll-button right"
-            onClick={() => handleScroll(nowLivePodcastScroll, 400)}
-          >
-            <IoIosArrowForward
-              style={{ background: "transparent", color: "black" }}
-            />
-          </Button>
+          {nowLivePodcasts.length > 3 && (
+          <>
+            <Button
+              variant="dark"
+              className="scroll-button left"
+              onClick={() => handleScroll(nowLivePodcastScroll, -400)}
+            >
+              <IoIosArrowBack
+                style={{ background: "transparent", color: "black" }}
+              />
+            </Button>
+            <Button
+              variant="dark"
+              className="scroll-button right"
+              onClick={() => handleScroll(nowLivePodcastScroll, 400)}
+            >
+              <IoIosArrowForward
+                style={{ background: "transparent", color: "black" }}
+              />
+            </Button>
+          </>
+        )}
         </div>
       </Container>
     </div>
