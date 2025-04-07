@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  Phone,
   Mic,
   MicOff,
   ScreenShare,
@@ -120,7 +119,15 @@ export default function PodcastLive() {
     isHost = false,
     isSpeaker = false
   ) => {
-    if (!participantsRef.current.has(id)) {
+    const existingParticipant = participantsRef.current.get(id);
+    if (existingParticipant) {
+      // Update existing participant
+      existingParticipant.name = name;
+      existingParticipant.isHost = isHost;
+      existingParticipant.isSpeaker = isHost ? true : isSpeaker; // Host is always a speaker
+      participantsRef.current.set(id, existingParticipant);
+    } else {
+      // Add new participant
       const newParticipant = {
         id,
         name,
@@ -130,12 +137,12 @@ export default function PodcastLive() {
         leaveTime: null,
         totalSpeakingTime: 0,
         isHost,
-        isSpeaker,
+        isSpeaker: isHost ? true : isSpeaker, // Host is always a speaker
       };
       participantsRef.current.set(id, newParticipant);
-      setParticipants(Array.from(participantsRef.current.values()));
       showNotification(`${name} joined the room`);
     }
+    setParticipants(Array.from(participantsRef.current.values()));
   };
 
   const removeParticipant = (id) => {
@@ -178,6 +185,8 @@ export default function PodcastLive() {
       console.log("Episode data:", data);
       if (data.creator_id === clientId) {
         setIsHost(true);
+      } else {
+        setIsHost(false);
       }
     } catch (error) {
       console.error("Error fetching episode:", error);
@@ -190,6 +199,19 @@ export default function PodcastLive() {
       console.error("Cannot join room: No client ID available");
       return;
     }
+
+    // Wait for isHost to be determined
+    if (isHost === null) {
+      await new Promise((resolve) => {
+        const checkHost = setInterval(() => {
+          if (isHost !== null) {
+            clearInterval(checkHost);
+            resolve();
+          }
+        }, 100);
+      });
+    }
+
     setConnectionStatus("connecting");
     wsRef.current = new WebSocket(
       `ws://localhost:8000/api/v1/websocket/${ROOM_ID}/${clientId}`
@@ -206,6 +228,12 @@ export default function PodcastLive() {
           isSpeaker: isHost,
         })
       );
+      console.log("user: ", JSON.stringify({
+        type: "user-joined",
+        client_id: clientId,
+        isHost: isHost,
+        isSpeaker: isHost,
+      }));
     };
 
     wsRef.current.onclose = () => {
@@ -307,13 +335,21 @@ export default function PodcastLive() {
 
   const handleUserJoined = (message) => {
     if (message.client_id !== clientId) {
-      addParticipant(
-        message.client_id,
-        message.client_id,
-        Date.now(),
-        message.isHost || false,
-        message.isSpeaker || false
-      );
+      const existingParticipant = participantsRef.current.get(message.client_id);
+      if (existingParticipant) {
+        existingParticipant.isHost = message.is_host || false;
+        existingParticipant.isSpeaker = message.is_host ? true : (message.is_speaker || false);
+        participantsRef.current.set(message.client_id, existingParticipant);
+      } else {
+        addParticipant(
+          message.client_id,
+          message.client_id,
+          Date.now(),
+          message.is_host || false,
+          message.is_host ? true : (message.is_speaker || false)
+        );
+      }
+      setParticipants(Array.from(participantsRef.current.values()));
     }
   };
 
@@ -354,9 +390,16 @@ export default function PodcastLive() {
   const handleUsersList = (message) => {
     message.users.forEach((user) => {
       if (user.id !== clientId) {
-        addParticipant(user.id, user.id);
+        addParticipant(
+          user.id,
+          user.id, // Using ID as name for simplicity; adjust if server sends a name
+          Date.now(),
+          user.is_host || false,
+          user.is_speaker || user.is_host || false  // Ensure host is speaker
+        );
       }
     });
+    console.log("Users list updated:", message.users);
   };
 
   const handleDisconnect = (message) => {
@@ -970,7 +1013,9 @@ export default function PodcastLive() {
 
   // 3. When isHost is determined, join room and start call
   useEffect(() => {
-    if (isHost === !clientId) return; // Wait until we know host status
+    console.log("isHost:", isHost);
+    console.log("clientId:", clientId);
+    if (isHost === null || !clientId) return; // Wait until isHost is determined
 
     const setupCall = async () => {
       console.log("Joining room as host:", isHost);
@@ -1055,90 +1100,121 @@ export default function PodcastLive() {
             )}
 
             {/* Participants */}
-            <div className="flex-1">
-              <h3 className="font-semibold flex items-center gap-2 mb-6 text-lg">
-                <UserPlus className="w-5 h-5" />
-                Participants ({participants.length})
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-                {participants.map((participant) => (
-                  <div
-                    key={participant.id}
-                    className="flex flex-col items-center gap-2"
-                  >
-                    <div className="relative">
+            <div className="flex-1 overflow-y-auto">
+              {/* Speakers Section */}
+              <div className="mb-6">
+                <h3 className="font-semibold flex items-center gap-2 mb-4 text-lg">
+                  <Mic className="w-5 h-5" />
+                  Speakers (
+                  {participants.filter((p) => p.isSpeaker || p.isHost).length})
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+                  {participants
+                    .filter((p) => p.isSpeaker || p.isHost) // Include hosts even if isSpeaker is false
+                    .map((participant) => (
                       <div
-                        className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-xl font-medium bg-gray-500`}
+                        key={participant.id}
+                        className="flex flex-col items-center gap-2"
                       >
-                        {participant.name.charAt(0)}
-                      </div>
-                      {participant.isSpeaking && (
-                        <div className="absolute inset-0 rounded-full border-2 border-green-500 animate-pulse" />
-                      )}
-                    </div>
-                    <div className="text-center">
-                      <div className="text-sm font-medium">
-                        {participant.name}
-                        {participant.id === clientId && " (You)"}
-                      </div>
-                      <div className="text-xs text-gray-500 flex flex-col items-center gap-1 mt-1">
-                        {participant.isHost && (
-                          <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">
-                            Host
-                          </span>
-                        )}
-                        {participant.isSpeaker && !participant.isHost && (
-                          <span className="bg-purple-100 text-purple-800 text-xs px-2 py-0.5 rounded">
-                            Speaker
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    {isHost && !participant.isHost && participant.isSpeaker && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-red-500 hover:text-red-700"
-                        onClick={() => {
-                          wsRef.current.send(
-                            JSON.stringify({
-                              type: "revoke-speaker",
-                              recipient: participant.id,
-                              sender: clientId,
-                            })
-                          );
-                        }}
-                      >
-                        <MicOff className="h-4 w-4" />
-                      </Button>
-                    )}
-                    {isHost &&
-                      !participant.isHost &&
-                      !participant.isSpeaker &&
-                      pendingRequests.some(
-                        (req) => req.id === participant.id
-                      ) && (
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-green-500 hover:text-green-700"
-                            onClick={() => approveRequest(participant.id)}
+                        <div className="relative">
+                          <div
+                            className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-xl font-medium bg-gray-500`}
                           >
-                            <Check className="h-4 w-4" />
-                          </Button>
+                            {participant.name.charAt(0)}
+                          </div>
+                          {participant.isSpeaking && (
+                            <div className="absolute inset-0 rounded-full border-2 border-green-500 animate-pulse" />
+                          )}
+                        </div>
+                        <div className="text-center">
+                          <div className="text-sm font-medium">
+                            {participant.name}
+                            {participant.id === clientId && " (You)"}
+                          </div>
+                          <div className="text-xs text-gray-500 flex flex-col items-center gap-1 mt-1">
+                            {participant.isHost && (
+                              <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">
+                                Host
+                              </span>
+                            )}
+                            {!participant.isHost && (
+                              <span className="bg-purple-100 text-purple-800 text-xs px-2 py-0.5 rounded">
+                                Speaker
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {isHost && !participant.isHost && (
                           <Button
                             variant="ghost"
                             size="sm"
                             className="text-red-500 hover:text-red-700"
-                            onClick={() => declineRequest(participant.id)}
+                            onClick={() => demoteSpeaker(participant.id)}
                           >
-                            <X className="h-4 w-4" />
+                            <MicOff className="h-4 w-4" />
                           </Button>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              {/* Listeners Section */}
+              <div>
+                <h3 className="font-semibold flex items-center gap-2 mb-4 text-lg">
+                  <UserPlus className="w-5 h-5" />
+                  Listeners (
+                  {participants.filter((p) => !p.isSpeaker && !p.isHost).length}
+                  )
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+                  {participants
+                    .filter((p) => !p.isSpeaker && !p.isHost) // Exclude hosts from listeners
+                    .map((participant) => (
+                      <div
+                        key={participant.id}
+                        className="flex flex-col items-center gap-2"
+                      >
+                        <div className="relative">
+                          <div
+                            className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-xl font-medium bg-gray-500`}
+                          >
+                            {participant.name.charAt(0)}
+                          </div>
                         </div>
-                      )}
-                  </div>
-                ))}
+                        <div className="text-center">
+                          <div className="text-sm font-medium">
+                            {participant.name}
+                            {participant.id === clientId && " (You)"}
+                          </div>
+                        </div>
+                        {isHost &&
+                          !participant.isHost &&
+                          pendingRequests.some(
+                            (req) => req.id === participant.id
+                          ) && (
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-green-500 hover:text-green-700"
+                                onClick={() => approveRequest(participant.id)}
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-500 hover:text-red-700"
+                                onClick={() => declineRequest(participant.id)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
+                      </div>
+                    ))}
+                </div>
               </div>
             </div>
 

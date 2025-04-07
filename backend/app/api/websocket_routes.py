@@ -35,8 +35,10 @@ async def websocket_endpoint(
     # Associate the room with the episode
     manager.associate_episode(room_id, episode_id)
     
+    is_host = str(episode.creator_id) == user_id
+    
     # Connect to WebSocket
-    await manager.connect(websocket, user_id, room_id)
+    await manager.connect(websocket, user_id, room_id, is_host)
     try:
         while True:
             data = await websocket.receive_text()

@@ -16,9 +16,16 @@ class ConnectionManager:
         self.screen_sharers: Dict[str, str] = {}  # Room ID -> User ID
         self.chat_messages: Dict[str, List[dict]] = {}  # Room ID -> list of chat messages
 
-    async def connect(self, websocket: WebSocket, client_id: str, room_id: str):
+    async def connect(self, websocket: WebSocket, client_id: str, room_id: str, is_host: bool = False):
         await websocket.accept()
-        self.active_connections[client_id] = websocket
+        
+        # Store client metadata
+        self.active_connections[client_id] = {
+            "websocket": websocket,
+            "is_host": is_host,
+            "is_speaker": is_host  # Host starts as speaker by default
+        }
+        
         if room_id not in self.rooms:
             self.rooms[room_id] = set()
             self.speech_events[room_id] = []
@@ -32,17 +39,26 @@ class ConnectionManager:
         
         # Notify everyone in the room about the new user
         await self.broadcast_to_room(
-            json.dumps({
-                "type": "user-joined",
-                "client_id": client_id,
-                "timestamp": join_event["timestamp"]
-            }),
-            room_id,
-            ""  # Empty sender means system message
+        json.dumps({
+            "type": "user-joined",
+            "client_id": client_id,
+            "is_host": is_host,
+            "is_speaker": is_host,  # Host is speaker by default
+            "timestamp": join_event["timestamp"]
+        }),
+        room_id,
+        ""
         )
         
         # Send the current users list to the new connection
-        users = [{"id": uid} for uid in self.rooms[room_id]]
+        users = [
+        {
+            "id": uid,
+            "is_host": self.active_connections[uid]["is_host"],
+            "is_speaker": self.active_connections[uid]["is_speaker"]
+        }
+        for uid in self.rooms[room_id]
+        ]
         await websocket.send_text(json.dumps({
             "type": "users-list",
             "users": users
@@ -53,6 +69,7 @@ class ConnectionManager:
 
     def disconnect(self, client_id: str, room_id: str):
         self.active_connections.pop(client_id, None)
+        
         if room_id in self.rooms:
             # Record leave event using the new method
             if room_id in self.session_events:
@@ -126,7 +143,7 @@ class ConnectionManager:
         if room_id in self.rooms:
             for client_id in self.rooms[room_id]:
                 if client_id != sender_id and client_id in self.active_connections:
-                    await self.active_connections[client_id].send_text(message)
+                    await self.active_connections[client_id]["websocket"].send_text(message)
 
     async def broadcast_speech_event(self, room_id: str, client_id: str, is_speaking: bool):
         """Broadcast speaking status to all users in a room"""
