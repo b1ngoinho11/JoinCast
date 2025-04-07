@@ -3,18 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Phone,
-  PhoneOff,
   Mic,
   MicOff,
   ScreenShare,
-  MonitorOff,
   Video,
-  StopCircle,
   UserPlus,
   Check,
   X,
   CircleDot,
-  Circle,
+  Hand,
 } from "lucide-react";
 
 const ROOM_ID = "33aa041b-500e-4b32-af0e-91a28ec7dd13";
@@ -958,8 +955,9 @@ export default function PodcastLive() {
   }, [clientId, isHost]); // Runs when either changes
 
   return (
-    <div className="flex flex-col items-center p-4 gap-4">
-      <div className="w-full max-w-4xl flex justify-between items-center p-2 bg-white rounded-lg shadow">
+    <div className="flex flex-col items-center p-4 gap-4 min-h-screen">
+      {/* Header moved to top center */}
+      <div className="w-full max-w-4xl flex justify-between items-center p-4 bg-white rounded-lg shadow mb-4">
         <h1 className="text-xl font-bold text-blue-600">
           Live Voice & Screen Sharing
         </h1>
@@ -986,123 +984,194 @@ export default function PodcastLive() {
         </div>
       </div>
 
-      <div className="w-full max-w-4xl grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 space-y-4">
-          <Card>
-            <CardContent className="p-4 space-y-4">
-              <div className="space-y-2">
-                {!isHost && (
-                  <>
-                    <h3 className="font-semibold flex items-center gap-2">
-                      <Mic className="w-4 h-4" />
-                      Speaker Request
-                    </h3>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        onClick={requestToSpeak}
-                        disabled={
-                          speakerRequestStatus !== null || !isCallActive
-                        }
-                      >
-                        Request to Speak
-                      </Button>
+      {/* Main content centered */}
+      <div className="w-full max-w-4xl flex flex-col gap-6">
+        {/* Participants section - full width */}
+        <Card className="w-full">
+          <CardContent className="p-6">
+            <h3 className="font-semibold flex items-center gap-2 mb-6 text-lg">
+              <UserPlus className="w-5 h-5" />
+              Participants ({participants.length})
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+              {participants.map((participant) => (
+                <div
+                  key={participant.id}
+                  className="flex flex-col items-center gap-2"
+                >
+                  <div className="relative">
+                    <div
+                      className={`w-16 h-16 rounded-full flex items-center justify-center text-white text-xl font-medium ${
+                        participant.isHost || participant.isSpeaker
+                          ? "bg-blue-600"
+                          : "bg-gray-500"
+                      }`}
+                    >
+                      {participant.name.charAt(0)}
                     </div>
-                    {speakerRequestStatus && (
-                      <div
-                        className={`flex items-center text-sm ${
-                          speakerRequestStatus === "pending"
-                            ? "text-yellow-600"
-                            : speakerRequestStatus === "approved"
-                            ? "text-green-600"
-                            : "text-red-600"
-                        }`}
+                    {participant.isSpeaking && (
+                      <div className="absolute inset-0 rounded-full border-2 border-green-500 animate-pulse" />
+                    )}
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm font-medium">
+                      {participant.name}
+                      {participant.id === clientId && " (You)"}
+                    </div>
+                    <div className="text-xs text-gray-500 flex flex-col items-center gap-1 mt-1">
+                      {participant.isHost && (
+                        <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">
+                          Host
+                        </span>
+                      )}
+                      {participant.isSpeaker && !participant.isHost && (
+                        <span className="bg-purple-100 text-purple-800 text-xs px-2 py-0.5 rounded">
+                          Speaker
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {isHost &&
+                    !participant.isHost &&
+                    participant.isSpeaker && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-500 hover:text-red-700"
+                        onClick={() => {
+                          wsRef.current.send(
+                            JSON.stringify({
+                              type: "revoke-speaker",
+                              recipient: participant.id,
+                              sender: clientId,
+                            })
+                          );
+                        }}
                       >
-                        <CircleDot className="mr-2 h-4 w-4 animate-pulse" />
-                        {speakerRequestStatus === "pending" && "Request sent"}
-                        {speakerRequestStatus === "approved" &&
-                          "Request approved - you can now speak"}
-                        {speakerRequestStatus === "declined" &&
-                          "Request declined"}
+                        <MicOff className="h-4 w-4" />
+                      </Button>
+                    )}
+                  {isHost &&
+                    !participant.isHost &&
+                    !participant.isSpeaker &&
+                    pendingRequests.some((req) => req.id === participant.id) && (
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-green-500 hover:text-green-700"
+                          onClick={() => approveRequest(participant.id)}
+                        >
+                          <Check className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-500 hover:text-red-700"
+                          onClick={() => declineRequest(participant.id)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
                       </div>
                     )}
-                  </>
-                )}
-              </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Combined Controls section */}
+        <div className="grid grid-cols-1 gap-6">
+          <Card>
+            <CardContent className="p-6 space-y-6">
+              {!isHost && (
+                <div className="space-y-3">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <Mic className="w-4 h-4" />
+                    Speaker Request
+                  </h3>
+                  <Button
+                    variant="outline"
+                    onClick={requestToSpeak}
+                    disabled={speakerRequestStatus !== null || !isCallActive}
+                    className={`rounded-full w-12 h-12 flex items-center justify-center p-0 ${
+                      speakerRequestStatus === "pending"
+                        ? "text-yellow-500"
+                        : speakerRequestStatus === "approved"
+                        ? "text-green-500"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    <Hand className="h-6 w-6" />
+                  </Button>
+                  {speakerRequestStatus && (
+                    <div
+                      className={`flex items-center text-sm ${
+                        speakerRequestStatus === "pending"
+                          ? "text-yellow-600"
+                          : speakerRequestStatus === "approved"
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      <CircleDot className="mr-2 h-4 w-4 animate-pulse" />
+                      {speakerRequestStatus === "pending" && "Request sent"}
+                      {speakerRequestStatus === "approved" &&
+                        "Request approved - you can now speak"}
+                      {speakerRequestStatus === "declined" && "Request declined"}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {(isHost || isSpeaker) && (
-                <div className="space-y-2">
+                <div className="space-y-4">
                   <h3 className="font-semibold flex items-center gap-2">
                     <Phone className="w-4 h-4" />
-                    Call Controls
+                    Controls
                   </h3>
-                  <div className="flex gap-2">
+                  <div className="flex gap-4 flex-wrap">
+                    {/* Audio Toggle */}
                     <Button
                       variant="outline"
                       onClick={toggleMute}
                       disabled={!isCallActive}
+                      className={`rounded-full w-12 h-12 flex items-center justify-center p-0 ${
+                        isMuted ? "text-red-500" : "text-green-500"
+                      }`}
                     >
                       {isMuted ? (
-                        <MicOff className="mr-2 h-4 w-4" />
+                        <MicOff className="h-6 w-6" />
                       ) : (
-                        <Mic className="mr-2 h-4 w-4" />
+                        <Mic className="h-6 w-6" />
                       )}
-                      {isMuted ? "Unmute" : "Mute"}
                     </Button>
-                  </div>
-                </div>
-              )}
 
-              {(isHost || isSpeaker) && (
-                <div className="space-y-2">
-                  <h3 className="font-semibold flex items-center gap-2">
-                    <ScreenShare className="w-4 h-4" />
-                    Screen Sharing
-                  </h3>
-                  <div className="flex gap-2">
+                    {/* Screen Share Toggle */}
                     <Button
                       variant="outline"
-                      onClick={startScreenShare}
-                      disabled={isSharing || !isCallActive}
+                      onClick={isSharing ? stopScreenShare : startScreenShare}
+                      disabled={!isCallActive}
+                      className={`rounded-full w-12 h-12 flex items-center justify-center p-0 ${
+                        isSharing ? "text-green-500" : "text-gray-500"
+                      }`}
                     >
-                      <ScreenShare className="mr-2 h-4 w-4" />
-                      Share Screen
+                      <ScreenShare className="h-6 w-6" />
                     </Button>
-                    <Button
-                      variant="outline"
-                      onClick={stopScreenShare}
-                      disabled={!isSharing}
-                    >
-                      <MonitorOff className="mr-2 h-4 w-4" />
-                      Stop Sharing
-                    </Button>
-                  </div>
-                </div>
-              )}
 
-              {isHost && (
-                <div className="space-y-2">
-                  <h3 className="font-semibold flex items-center gap-2">
-                    <Circle className="w-4 h-4" />
-                    Recording
-                  </h3>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={startRecording}
-                      disabled={isRecording || !isCallActive}
-                    >
-                      <Video className="mr-2 h-4 w-4" />
-                      Record
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={stopRecording}
-                      disabled={!isRecording}
-                    >
-                      <StopCircle className="mr-2 h-4 w-4" />
-                      Stop
-                    </Button>
+                    {/* Recording Toggle (Host only) */}
+                    {isHost && (
+                      <Button
+                        variant="outline"
+                        onClick={isRecording ? stopRecording : startRecording}
+                        disabled={!isCallActive}
+                        className={`rounded-full w-12 h-12 flex items-center justify-center p-0 ${
+                          isRecording ? "text-red-500" : "text-gray-500"
+                        }`}
+                      >
+                        <Video className="h-6 w-6" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               )}
@@ -1111,8 +1180,8 @@ export default function PodcastLive() {
 
           {(isSharing || participants.some((p) => p.isScreenSharing)) && (
             <Card>
-              <CardContent className="p-4">
-                <h3 className="font-semibold mb-2">Screen Share</h3>
+              <CardContent className="p-6">
+                <h3 className="font-semibold mb-3">Screen Share</h3>
                 <div className="w-full bg-black rounded aspect-video flex items-center justify-center">
                   <video
                     ref={screenShareVideoRef}
@@ -1124,109 +1193,6 @@ export default function PodcastLive() {
               </CardContent>
             </Card>
           )}
-        </div>
-
-        <div className="space-y-4">
-          <Card>
-            <CardContent className="p-4 space-y-4">
-              <div className="space-y-4">
-                <h3 className="font-semibold flex items-center gap-2">
-                  <UserPlus className="w-4 h-4" />
-                  Participants ({participants.length})
-                </h3>
-
-                {/* Combined Participants Section */}
-                <div className="space-y-2">
-                  {participants.map((participant) => (
-                    <div
-                      key={participant.id}
-                      className={`flex items-center p-2 rounded ${
-                        participant.isSpeaking
-                          ? "border-l-4 border-green-500 bg-green-50"
-                          : "bg-gray-50"
-                      }`}
-                    >
-                      <div
-                        className={`w-8 h-8 rounded-full ${
-                          participant.isHost || participant.isSpeaker
-                            ? "bg-blue-600"
-                            : "bg-gray-500"
-                        } text-white flex items-center justify-center mr-2`}
-                      >
-                        {participant.name.charAt(0)}
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-medium">
-                          {participant.name}
-                          {participant.id === clientId && " (You)"}
-                        </div>
-                        <div className="text-xs text-gray-500 flex items-center gap-1">
-                          {participant.isHost && (
-                            <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">
-                              Host
-                            </span>
-                          )}
-                          {participant.isSpeaker && !participant.isHost && (
-                            <span className="bg-purple-100 text-purple-800 text-xs px-2 py-0.5 rounded">
-                              Speaker
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      {participant.isSpeaking && (
-                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                      )}
-                      {isHost &&
-                        !participant.isHost &&
-                        participant.isSpeaker && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-500 hover:text-red-700"
-                            onClick={() => {
-                              wsRef.current.send(
-                                JSON.stringify({
-                                  type: "revoke-speaker",
-                                  recipient: participant.id,
-                                  sender: clientId,
-                                })
-                              );
-                            }}
-                          >
-                            <MicOff className="h-4 w-4" />
-                          </Button>
-                        )}
-                      {isHost &&
-                        !participant.isHost &&
-                        !participant.isSpeaker &&
-                        pendingRequests.some(
-                          (req) => req.id === participant.id
-                        ) && (
-                          <div className="flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-green-500 hover:text-green-700"
-                              onClick={() => approveRequest(participant.id)}
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-red-500 hover:text-red-700"
-                              onClick={() => declineRequest(participant.id)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>
