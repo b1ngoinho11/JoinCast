@@ -228,12 +228,15 @@ export default function PodcastLive() {
           isSpeaker: isHost,
         })
       );
-      console.log("user: ", JSON.stringify({
-        type: "user-joined",
-        client_id: clientId,
-        isHost: isHost,
-        isSpeaker: isHost,
-      }));
+      console.log(
+        "user: ",
+        JSON.stringify({
+          type: "user-joined",
+          client_id: clientId,
+          isHost: isHost,
+          isSpeaker: isHost,
+        })
+      );
     };
 
     wsRef.current.onclose = () => {
@@ -305,6 +308,13 @@ export default function PodcastLive() {
                   track.enabled = !isMuted;
                 });
               }
+              // Update participant's isSpeaker status
+              const participant = participantsRef.current.get(clientId);
+              if (participant) {
+                participant.isSpeaker = true;
+                participantsRef.current.set(clientId, participant);
+                setParticipants(Array.from(participantsRef.current.values()));
+              }
             }
           }
           break;
@@ -317,6 +327,51 @@ export default function PodcastLive() {
                 track.enabled = false;
               });
             }
+            // Update participant's isSpeaker status locally
+            const participant = participantsRef.current.get(clientId);
+            if (participant) {
+              participant.isSpeaker = false;
+              participantsRef.current.set(clientId, participant);
+              setParticipants(Array.from(participantsRef.current.values()));
+            }
+          }
+          break;
+        case "speaker-request-response":
+          if (message.recipient === clientId) {
+            setSpeakerRequestStatus(message.approved ? "approved" : "declined");
+            if (message.approved) {
+              setIsSpeaker(true);
+              // Enable audio tracks when promoted to speaker
+              if (localStreamRef.current) {
+                localStreamRef.current.getAudioTracks().forEach((track) => {
+                  track.enabled = !isMuted;
+                });
+              }
+              // Update participant's isSpeaker status locally
+              const participant = participantsRef.current.get(clientId);
+              if (participant) {
+                participant.isSpeaker = true;
+                participantsRef.current.set(clientId, participant);
+                setParticipants(Array.from(participantsRef.current.values()));
+              }
+            }
+          }
+          // Update the participant's status on the host side as well
+          if (isHost && message.approved) {
+            const participant = participantsRef.current.get(message.recipient);
+            if (participant) {
+              participant.isSpeaker = true;
+              participantsRef.current.set(message.recipient, participant);
+              setParticipants(Array.from(participantsRef.current.values()));
+            }
+          }
+          break;
+        case "user-status-update":
+          const participant = participantsRef.current.get(message.client_id);
+          if (participant) {
+            participant.isSpeaker = message.is_speaker;
+            participantsRef.current.set(message.client_id, participant);
+            setParticipants(Array.from(participantsRef.current.values()));
           }
           break;
         case "chat-message":
@@ -335,10 +390,14 @@ export default function PodcastLive() {
 
   const handleUserJoined = (message) => {
     if (message.client_id !== clientId) {
-      const existingParticipant = participantsRef.current.get(message.client_id);
+      const existingParticipant = participantsRef.current.get(
+        message.client_id
+      );
       if (existingParticipant) {
         existingParticipant.isHost = message.is_host || false;
-        existingParticipant.isSpeaker = message.is_host ? true : (message.is_speaker || false);
+        existingParticipant.isSpeaker = message.is_host
+          ? true
+          : message.is_speaker || false;
         participantsRef.current.set(message.client_id, existingParticipant);
       } else {
         addParticipant(
@@ -346,7 +405,7 @@ export default function PodcastLive() {
           message.client_id,
           Date.now(),
           message.is_host || false,
-          message.is_host ? true : (message.is_speaker || false)
+          message.is_host ? true : message.is_speaker || false
         );
       }
       setParticipants(Array.from(participantsRef.current.values()));
@@ -395,7 +454,7 @@ export default function PodcastLive() {
           user.id, // Using ID as name for simplicity; adjust if server sends a name
           Date.now(),
           user.is_host || false,
-          user.is_speaker || user.is_host || false  // Ensure host is speaker
+          user.is_speaker || user.is_host || false // Ensure host is speaker
         );
       }
     });
@@ -616,6 +675,14 @@ export default function PodcastLive() {
         timestamp: timestamp,
       })
     );
+
+    // Immediately update the participant's status locally
+    const participant = participantsRef.current.get(requesterId);
+    if (participant) {
+      participant.isSpeaker = true;
+      participantsRef.current.set(requesterId, participant);
+      setParticipants(Array.from(participantsRef.current.values()));
+    }
 
     setPendingRequests((prev) => prev.filter((req) => req.id !== requesterId));
   };

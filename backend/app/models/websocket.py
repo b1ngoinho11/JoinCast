@@ -156,7 +156,7 @@ class ConnectionManager:
             
             for uid in self.rooms[room_id]:
                 if uid in self.active_connections:
-                    await self.active_connections[uid].send_text(message)
+                    await self.active_connections[uid]["websocket"].send_text(message)
 
     def start_recording(self, room_id: str, mime_type: str):
         """Start recording a live session"""
@@ -213,6 +213,24 @@ class ConnectionManager:
             })
             for client_id in self.rooms[room_id]:
                 if client_id in self.active_connections:
-                    await self.active_connections[client_id].send_text(message_json)
-        
+                    await self.active_connections[client_id]["websocket"].send_text(message_json)
+            
+    def update_speaker_status(self, client_id: str, is_speaker: bool):
+        """Update the speaker status of a client"""
+        if client_id in self.active_connections:
+            self.active_connections[client_id]["is_speaker"] = is_speaker
+
+    async def broadcast_user_status(self, room_id: str, client_id: str, is_speaker: bool):
+        """Broadcast updated user status to all clients in the room"""
+        if room_id in self.rooms:
+            message = json.dumps({
+                "type": "user-status-update",
+                "client_id": client_id,
+                "is_speaker": is_speaker,
+                "timestamp": datetime.now().timestamp() * 1000
+            })
+            for uid in self.rooms[room_id]:
+                if uid in self.active_connections:
+                    await self.active_connections[uid]["websocket"].send_text(message)
+                    
 manager = ConnectionManager()

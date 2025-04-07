@@ -163,6 +163,10 @@ async def websocket_endpoint(
                     message.get('timestamp'),
                     {"recipient": message['recipient']}
                 )
+                # Update speaker status on the server
+                manager.update_speaker_status(message['recipient'], False)
+                await manager.broadcast_user_status(room_id, message['recipient'], False)
+                # Broadcast the revoke message to all clients
                 await manager.broadcast_to_room(data, room_id, user_id)
                 
             elif message['type'] == 'chat-message':
@@ -172,6 +176,25 @@ async def websocket_endpoint(
                     "timestamp": message.get('timestamp')
                 }
                 await manager.broadcast_chat_message(room_id, chat_message)    
+            
+            elif message['type'] == 'speaker-request-response':
+                # Log speaker request response in session events
+                manager.record_session_event(
+                    room_id,
+                    message['type'],
+                    message['sender'],
+                    message.get('timestamp'),
+                    {
+                        "recipient": message['recipient'],
+                        "approved": message['approved']
+                    }
+                )
+                # Update speaker status on the server
+                if message['approved']:
+                    manager.update_speaker_status(message['recipient'], True)
+                    await manager.broadcast_user_status(room_id, message['recipient'], True)
+                # Broadcast the response to all clients
+                await manager.broadcast_to_room(data, room_id, user_id)
             
             else:
                 await manager.broadcast_to_room(data, room_id, user_id)
