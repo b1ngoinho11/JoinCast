@@ -979,6 +979,22 @@ export default function PodcastLive() {
       await startCall();
     };
     setupCall();
+
+    // Add cleanup function
+    return () => {
+      console.log("Cleaning up WebSocket and media connections");
+      if (wsRef.current) {
+        wsRef.current.send(
+          JSON.stringify({
+            type: "disconnect",
+            client_id: clientId,
+          })
+        );
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+      stopCall(); // This will clean up media streams and peer connections
+    };
   }, [clientId, isHost]); // Runs when either changes
 
   useEffect(() => {
@@ -989,12 +1005,10 @@ export default function PodcastLive() {
   }, [chatMessages]);
 
   return (
-    <div className="flex flex-col items-center p-4 gap-4 min-h-screen">
+    <div className="flex flex-col items-center p-4 min-h-screen">
       {/* Header moved to top center */}
-      <div className="w-full max-w-4xl flex justify-between items-center p-4 bg-white rounded-lg shadow mb-4">
-        <h1 className="text-xl font-bold text-blue-600">
-          Live Voice & Screen Sharing
-        </h1>
+      <div className="w-full max-w-6xl flex justify-between items-center mb-4">
+        <h1 className="text-xl font-bold">Live Voice & Screen Sharing</h1>
         <div className="flex items-center gap-2">
           <div
             className={`w-3 h-3 rounded-full ${
@@ -1019,159 +1033,119 @@ export default function PodcastLive() {
       </div>
 
       {/* Main content centered */}
-      <div className="w-full max-w-4xl flex flex-col gap-6">
-        {/* Participants section - full width */}
-        <Card className="w-full">
-          <CardContent className="p-6">
-            <h3 className="font-semibold flex items-center gap-2 mb-6 text-lg">
-              <UserPlus className="w-5 h-5" />
-              Participants ({participants.length})
-            </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-              {participants.map((participant) => (
-                <div
-                  key={participant.id}
-                  className="flex flex-col items-center gap-2"
-                >
-                  <div className="relative">
-                    <div
-                      className={`w-16 h-16 rounded-full flex items-center justify-center text-white text-xl font-medium ${
-                        participant.isHost || participant.isSpeaker
-                          ? "bg-blue-600"
-                          : "bg-gray-500"
-                      }`}
-                    >
-                      {participant.name.charAt(0)}
-                    </div>
-                    {participant.isSpeaking && (
-                      <div className="absolute inset-0 rounded-full border-2 border-green-500 animate-pulse" />
-                    )}
-                  </div>
-                  <div className="text-center">
-                    <div className="text-sm font-medium">
-                      {participant.name}
-                      {participant.id === clientId && " (You)"}
-                    </div>
-                    <div className="text-xs text-gray-500 flex flex-col items-center gap-1 mt-1">
-                      {participant.isHost && (
-                        <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">
-                          Host
-                        </span>
-                      )}
-                      {participant.isSpeaker && !participant.isHost && (
-                        <span className="bg-purple-100 text-purple-800 text-xs px-2 py-0.5 rounded">
-                          Speaker
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  {isHost && !participant.isHost && participant.isSpeaker && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-red-500 hover:text-red-700"
-                      onClick={() => {
-                        wsRef.current.send(
-                          JSON.stringify({
-                            type: "revoke-speaker",
-                            recipient: participant.id,
-                            sender: clientId,
-                          })
-                        );
-                      }}
-                    >
-                      <MicOff className="h-4 w-4" />
-                    </Button>
-                  )}
-                  {isHost &&
-                    !participant.isHost &&
-                    !participant.isSpeaker &&
-                    pendingRequests.some(
-                      (req) => req.id === participant.id
-                    ) && (
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-green-500 hover:text-green-700"
-                          onClick={() => approveRequest(participant.id)}
-                        >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-500 hover:text-red-700"
-                          onClick={() => declineRequest(participant.id)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
+      <div
+        className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-3 gap-6"
+        style={{ height: "calc(100vh - 220px)" }} // Adjusted height calculation
+      >
+        {/* Combined Participants and Controls section - takes 2/3 width on md+ screens */}
+        <Card className="md:col-span-2">
+          <CardContent className="p-6 flex flex-col h-full">
+            {/* Screen Share section - displayed above Participants if active */}
+            {(isSharing || participants.some((p) => p.isScreenSharing)) && (
+              <div className="mb-6">
+                <div className="w-full bg-black rounded aspect-video flex items-center justify-center">
+                  <video
+                    ref={screenShareVideoRef}
+                    autoPlay
+                    playsInline
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Participants */}
+            <div className="flex-1">
+              <h3 className="font-semibold flex items-center gap-2 mb-6 text-lg">
+                <UserPlus className="w-5 h-5" />
+                Participants ({participants.length})
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+                {participants.map((participant) => (
+                  <div
+                    key={participant.id}
+                    className="flex flex-col items-center gap-2"
+                  >
+                    <div className="relative">
+                      <div
+                        className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-xl font-medium bg-gray-500`}
+                      >
+                        {participant.name.charAt(0)}
                       </div>
+                      {participant.isSpeaking && (
+                        <div className="absolute inset-0 rounded-full border-2 border-green-500 animate-pulse" />
+                      )}
+                    </div>
+                    <div className="text-center">
+                      <div className="text-sm font-medium">
+                        {participant.name}
+                        {participant.id === clientId && " (You)"}
+                      </div>
+                      <div className="text-xs text-gray-500 flex flex-col items-center gap-1 mt-1">
+                        {participant.isHost && (
+                          <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">
+                            Host
+                          </span>
+                        )}
+                        {participant.isSpeaker && !participant.isHost && (
+                          <span className="bg-purple-100 text-purple-800 text-xs px-2 py-0.5 rounded">
+                            Speaker
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {isHost && !participant.isHost && participant.isSpeaker && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-500 hover:text-red-700"
+                        onClick={() => {
+                          wsRef.current.send(
+                            JSON.stringify({
+                              type: "revoke-speaker",
+                              recipient: participant.id,
+                              sender: clientId,
+                            })
+                          );
+                        }}
+                      >
+                        <MicOff className="h-4 w-4" />
+                      </Button>
                     )}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Chat section */}
-        <Card className="md:col-span-1">
-          <CardContent className="p-6 flex flex-col h-[400px]">
-            <h3 className="font-semibold flex items-center gap-2 mb-4">
-              <MessageSquare className="w-5 h-5" />
-              Live Chat
-            </h3>
-            <div
-              ref={chatContainerRef}
-              className="flex-1 overflow-y-auto mb-4 space-y-2"
-            >
-              {chatMessages.map((msg, index) => (
-                <div
-                  key={index}
-                  className={`text-sm ${
-                    msg.sender === clientId ? "text-right" : "text-left"
-                  }`}
-                >
-                  <span className="font-medium">
-                    {msg.sender === clientId ? "You" : msg.sender}:
-                  </span>{" "}
-                  <span>{msg.content}</span>
-                  <div className="text-xs text-gray-500">
-                    {new Date(msg.timestamp).toLocaleTimeString()}
+                    {isHost &&
+                      !participant.isHost &&
+                      !participant.isSpeaker &&
+                      pendingRequests.some(
+                        (req) => req.id === participant.id
+                      ) && (
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-green-500 hover:text-green-700"
+                            onClick={() => approveRequest(participant.id)}
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-500 hover:text-red-700"
+                            onClick={() => declineRequest(participant.id)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && sendChatMessage()}
-                placeholder="Type a message..."
-                className="flex-1 p-2 border rounded"
-                disabled={!isCallActive}
-              />
-              <Button
-                onClick={sendChatMessage}
-                disabled={!isCallActive || !chatInput.trim()}
-              >
-                Send
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* Combined Controls section */}
-        <div className="grid grid-cols-1 gap-6">
-          <Card>
-            <CardContent className="p-6 space-y-6">
+            {/* Control Buttons - Centered at the bottom */}
+            <div className="mt-6 flex justify-center gap-4 flex-wrap">
               {!isHost && (
-                <div className="space-y-3">
-                  <h3 className="font-semibold flex items-center gap-2">
-                    <Mic className="w-4 h-4" />
-                    Speaker Request
-                  </h3>
+                <div className="flex flex-col items-center space-y-2">
                   <Button
                     variant="outline"
                     onClick={requestToSpeak}
@@ -1208,75 +1182,119 @@ export default function PodcastLive() {
               )}
 
               {(isHost || isSpeaker) && (
-                <div className="space-y-4">
-                  <h3 className="font-semibold flex items-center gap-2">
-                    <Phone className="w-4 h-4" />
-                    Controls
-                  </h3>
-                  <div className="flex gap-4 flex-wrap">
-                    {/* Audio Toggle */}
-                    <Button
-                      variant="outline"
-                      onClick={toggleMute}
-                      disabled={!isCallActive}
-                      className={`rounded-full w-12 h-12 flex items-center justify-center p-0 ${
-                        isMuted ? "text-red-500" : "text-green-500"
-                      }`}
-                    >
-                      {isMuted ? (
-                        <MicOff className="h-6 w-6" />
-                      ) : (
-                        <Mic className="h-6 w-6" />
-                      )}
-                    </Button>
-
-                    {/* Screen Share Toggle */}
-                    <Button
-                      variant="outline"
-                      onClick={isSharing ? stopScreenShare : startScreenShare}
-                      disabled={!isCallActive}
-                      className={`rounded-full w-12 h-12 flex items-center justify-center p-0 ${
-                        isSharing ? "text-green-500" : "text-gray-500"
-                      }`}
-                    >
-                      <ScreenShare className="h-6 w-6" />
-                    </Button>
-
-                    {/* Recording Toggle (Host only) */}
-                    {isHost && (
-                      <Button
-                        variant="outline"
-                        onClick={isRecording ? stopRecording : startRecording}
-                        disabled={!isCallActive}
-                        className={`rounded-full w-12 h-12 flex items-center justify-center p-0 ${
-                          isRecording ? "text-red-500" : "text-gray-500"
-                        }`}
-                      >
-                        <Video className="h-6 w-6" />
-                      </Button>
+                <>
+                  {/* Audio Toggle */}
+                  <Button
+                    variant="outline"
+                    onClick={toggleMute}
+                    disabled={!isCallActive}
+                    className={`rounded-full w-12 h-12 flex items-center justify-center p-0 ${
+                      isMuted ? "text-red-500" : "text-green-500"
+                    }`}
+                  >
+                    {isMuted ? (
+                      <MicOff className="h-6 w-6" />
+                    ) : (
+                      <Mic className="h-6 w-6" />
                     )}
+                  </Button>
+
+                  {/* Screen Share Toggle */}
+                  <Button
+                    variant="outline"
+                    onClick={isSharing ? stopScreenShare : startScreenShare}
+                    disabled={!isCallActive}
+                    className={`rounded-full w-12 h-12 flex items-center justify-center p-0 ${
+                      isSharing ? "text-green-500" : "text-gray-500"
+                    }`}
+                  >
+                    <ScreenShare className="h-6 w-6" />
+                  </Button>
+
+                  {/* Recording Toggle (Host only) */}
+                  {isHost && (
+                    <Button
+                      variant="outline"
+                      onClick={isRecording ? stopRecording : startRecording}
+                      disabled={!isCallActive}
+                      className={`rounded-full w-12 h-12 flex items-center justify-center p-0 ${
+                        isRecording ? "text-red-500" : "text-gray-500"
+                      }`}
+                    >
+                      <Video className="h-6 w-6" />
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Chat section */}
+        <Card className="md:col-span-1">
+          <CardContent className="p-6 flex flex-col h-full">
+            <h3 className="font-semibold flex items-center gap-2 mb-4">
+              <MessageSquare className="w-5 h-5" />
+              Live Chat
+            </h3>
+            <div
+              ref={chatContainerRef}
+              className="flex-1 overflow-y-auto mb-4 space-y-2"
+            >
+              {chatMessages.map((msg, index) => (
+                <div
+                  key={index}
+                  className={`text-sm ${
+                    msg.sender === clientId ? "text-right" : "text-left"
+                  }`}
+                >
+                  <span className="font-medium">
+                    {msg.sender === clientId ? "You" : msg.sender}:
+                  </span>{" "}
+                  <span>{msg.content}</span>
+                  <div className="text-xs text-gray-500">
+                    {new Date(msg.timestamp).toLocaleTimeString()}
                   </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {(isSharing || participants.some((p) => p.isScreenSharing)) && (
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="font-semibold mb-3">Screen Share</h3>
-                <div className="w-full bg-black rounded aspect-video flex items-center justify-center">
-                  <video
-                    ref={screenShareVideoRef}
-                    autoPlay
-                    playsInline
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+              ))}
+            </div>
+            {/* Chat input fixed to bottom */}
+            <div className="mt-auto flex gap-2 w-full">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && sendChatMessage()}
+                placeholder="Type a message..."
+                className="flex-1 p-2 border rounded h-10"
+                disabled={!isCallActive}
+              />
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={sendChatMessage}
+                disabled={!isCallActive || !chatInput.trim()}
+                className="w-10 h-10 flex items-center justify-center"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="lucide lucide-send"
+                >
+                  <path d="m22 2-20 20" />
+                  <path d="M22 2 12 22 2 12" />
+                </svg>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
