@@ -43,21 +43,15 @@ def list_shows(
     shows = show_repository.get_multi(db, skip=skip, limit=limit)
     return shows
 
-@router.get("/{show_id}", response_model=ShowResponse)
-def get_show(
-    show_id: str,
+@router.get("/my-shows", response_model=List[ShowResponse])
+def get_my_shows(
+    creator_id: str,
     db: Session = Depends(get_db)
 ) -> Any:
     """
-    Get show by ID.
+    Get all shows created by the authenticated user.
     """
-    show = show_repository.get(db, id=show_id)
-    if not show:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Show not found"
-        )
-    return show
+    return show_repository.get_by_creator_id(db, creator_id=creator_id)
 
 @router.get("/by-name/{name}", response_model=ShowResponse)
 def get_show_by_name(
@@ -68,6 +62,22 @@ def get_show_by_name(
     Get show by name.
     """
     show = show_repository.get_by_name(db, name=name)
+    if not show:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Show not found"
+        )
+    return show
+
+@router.get("/{show_id}", response_model=ShowResponse)
+def get_show(
+    show_id: str,
+    db: Session = Depends(get_db)
+) -> Any:
+    """
+    Get show by ID.
+    """
+    show = show_repository.get(db, id=show_id)
     if not show:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

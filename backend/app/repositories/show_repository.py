@@ -47,5 +47,9 @@ class ShowRepository(BaseRepository[Show]):
         
         return show.episodes
 
+    def get_by_creator_id(self, db: Session, *, creator_id: str) -> List[Show]:
+        """Get all shows created by a specific user."""
+        return db.query(Show).filter(Show.creator_id == creator_id).all()
+
 # Initialize the repository
 show_repository = ShowRepository(Show)
