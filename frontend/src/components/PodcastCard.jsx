@@ -25,9 +25,9 @@ const formatTimeAgo = (timestamp) => {
   return `${diffInYears} years ago`;
 };
 
-const PodcastCard = ({ podcast, user }) => {
+const PodcastCard = ({ podcast, user, link }) => {
   return (
-    <Link to={`/podcast/${podcast.id}`} className="card-link">
+    <Link to={`/${link}${podcast.id}`} className="card-link">
       <div className="cardBox">
         <img
           src={podcast.imageUrl}

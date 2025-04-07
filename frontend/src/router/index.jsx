@@ -10,6 +10,7 @@ import Cookies from "js-cookie";
 import AnalyticsPage from "../pages/analyticsPage";
 import ContentPage from "@/pages/contentPage";
 import DashboardPage from "@/pages/dashboardPage";
+import RecordingPage from "../pages/recordingPage";
 
 const ProtectedLoader = () => {
   const token = Cookies.get("auth_token");
@@ -39,6 +40,10 @@ const router = createBrowserRouter([
       {
         path: "/podcast/:id",
         element: <PodcastLive />,
+      },
+      {
+        path: "/recording/:id",
+        element: <RecordingPage />,
       },
       {
         path: "/following",

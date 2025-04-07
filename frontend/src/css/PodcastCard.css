@@ -8,9 +8,9 @@
 }
 
 .podcast-card-image {
-    object-fit: cover; /* Ensure the image covers its box */
+    object-fit: fill; /* Stretch the image to fill its box */
     width: 100%;       /* Image takes full width of the card */
-    height: px;     /* Maintain a fixed height */
+    height: 200px;     /* Set a fixed height for uniformity */
 }
 
 .cardContent {

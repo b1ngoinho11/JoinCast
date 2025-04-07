@@ -1,0 +1,41 @@
+.container {
+  padding: 20px;
+}
+
+.card {
+  margin-bottom: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.card h2 {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.card p {
+  margin: 5px 0;
+  font-size: 16px;
+  color: #555;
+}
+
+.video-container {
+  text-align: center;
+  margin-top: 20px;
+}
+
+video {
+  width: 100%;
+  max-width: 800px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.alert {
+  margin-top: 20px;
+}
+
+.spinner {
+  margin-top: 50px;
+}

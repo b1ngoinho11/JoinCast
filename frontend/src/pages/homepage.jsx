@@ -14,6 +14,9 @@ const HomePage = () => {
   const [categories, setCategories] = useState([]);
   const [watchNowPodcasts, setWatchNowPodcasts] = useState([]);
   const [nowLivePodcasts, setNowLivePodcasts] = useState([]);
+  const [allWatchNowPodcasts, setAllWatchNowPodcasts] = useState([]);
+  const [allNowLivePodcasts, setAllNowLivePodcasts] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState("All");
 
   const handleScroll = (scrollRef, scrollOffset) => {
     if (scrollRef.current) {
@@ -36,6 +39,25 @@ const HomePage = () => {
     }
   };
 
+  const handleCategorySelect = (category) => {
+    setSelectedCategory(category);
+
+    if (category === "All") {
+      setWatchNowPodcasts(allWatchNowPodcasts);
+      setNowLivePodcasts(allNowLivePodcasts);
+    } else {
+      const filteredWatchNow = allWatchNowPodcasts.filter((podcast) =>
+        podcast.genre.includes(category)
+      );
+      const filteredNowLive = allNowLivePodcasts.filter((podcast) =>
+        podcast.genre.includes(category)
+      );
+
+      setWatchNowPodcasts(filteredWatchNow);
+      setNowLivePodcasts(filteredNowLive);
+    }
+  };
+
   useEffect(() => {
     updatVisibility(nowLivePodcastScroll);
     updatVisibility(trendingPodcastScroll);
@@ -50,11 +72,12 @@ const HomePage = () => {
           throw new Error("Failed to fetch categories");
         }
         const data = await response.json();
-        setCategories(data);
+        setCategories(["All", ...data]);
       } catch (error) {
         console.error("Error fetching categories:", error);
         // Set some default categories in case of error
         setCategories([
+          "All",
           "Technology",
           "Business",
           "Health",
@@ -101,6 +124,8 @@ const HomePage = () => {
           }
         });
 
+        setAllWatchNowPodcasts(watchNow);
+        setAllNowLivePodcasts(nowLive);
         setWatchNowPodcasts(watchNow);
         setNowLivePodcasts(nowLive);
       } catch (error) {
@@ -122,7 +147,11 @@ const HomePage = () => {
           >
             {categories.map((category, index) => (
               <Col xs="auto" key={index}>
-                <Button variant="dark" className="category-button">
+                <Button
+                  variant={selectedCategory === category ? "primary" : "dark"}
+                  className="category-button"
+                  onClick={() => handleCategorySelect(category)}
+                >
                   {category}
                 </Button>
               </Col>
@@ -143,7 +172,7 @@ const HomePage = () => {
                 className="flex-shrink-0"
                 style={{ minWidth: "300px" }}
               >
-                <PodcastCard podcast={podcast} user={podcast.creator} />
+                <PodcastCard podcast={podcast} user={podcast.creator} link={"recording/"} />
               </Col>
             ))}
           </Row>
@@ -181,7 +210,7 @@ const HomePage = () => {
                 className="flex-shrink-0"
                 style={{ minWidth: "300px" }}
               >
-                <PodcastCard podcast={podcast} user={user} />
+                <PodcastCard podcast={podcast} user={podcast.creator} link={"podcast/"} />
               </Col>
             ))}
           </Row>
