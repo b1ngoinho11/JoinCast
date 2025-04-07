@@ -5,6 +5,23 @@ const genres = [
     { id: 4, name: 'Sports' },
     { id: 5, name: 'Education' },
     { id: 6, name: 'Entertainment' },
+    { id: 7, name: 'Lifestyle' },
+    { id: 8, name: 'Travel' },
+    { id: 9, name: 'Food' },
+    { id: 10, name: 'Technology' },
+    { id: 11, name: 'Science' },
+    { id: 12, name: 'Health' },
+    { id: 13, name: 'Fashion' },
+    { id: 14, name: 'DIY' },
+    { id: 15, name: 'Comedy' },
+    { id: 16, name: 'Documentary' },
+    { id: 17, name: 'Animation' },
+    { id: 18, name: 'Short Film' },
+    { id: 19, name: 'Web Series' },
+    { id: 20, name: 'Vlogs' },
+    { id: 21, name: 'Motivation' },
+    { id: 22, name: 'Review' },
+    { id: 23, name: 'Podcast' },
   ];
 
   export default genres;

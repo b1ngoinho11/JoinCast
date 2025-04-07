@@ -9,7 +9,8 @@ import AccountPage from "../pages/accountPage";
 import Cookies from "js-cookie";
 import AnalyticsPage from "../pages/analyticsPage";
 import ContentPage from "@/pages/contentPage";
-import DashboardPage from "@/pages/dashboardPage";
+import EpisodesPage from "@/pages/episodesPage";
+import ShowsPage from "../pages/showsPage";
 import RecordingPage from "../pages/recordingPage";
 
 const ProtectedLoader = () => {
@@ -70,8 +71,13 @@ const router = createBrowserRouter([
         loader: ProtectedLoader,
       },
       {
-        path: "/dashboard",
-        element: <DashboardPage />,
+        path: "/shows",
+        element: <ShowsPage />,
+        loader: ProtectedLoader,
+      },
+      {
+        path: "/episodes",
+        element: <EpisodesPage />,
         loader: ProtectedLoader,
       }
     ],

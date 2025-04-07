@@ -52,10 +52,18 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         <Nav className="flex-column" style={{ height: "100vh", paddingTop: "50px", borderRadius: '50%'}}>
           <Nav.Link
             as={Link}
-            to="/dashboard"
-            className={`sidebarLink ${location.pathname === "/dashboard" ? "active" : ""}`}
+            to="/shows"
+            className={`sidebarLink ${location.pathname === "/shows" ? "active" : ""}`}
           >
-            {isOpen ? "Dashboard" : ""}
+            {isOpen ? "Shows" : ""}
+          </Nav.Link>          
+  
+          <Nav.Link
+            as={Link}
+            to="/episodes"
+            className={`sidebarLink ${location.pathname === "/episodes" ? "active" : ""}`}
+          >
+            {isOpen ? "Episodes" : ""}
           </Nav.Link>
           <Nav.Link
             as={Link}

@@ -14,7 +14,7 @@ const DashboardPage = () => {
     e.preventDefault();
     // Handle video upload logic here
     console.log('Video Title:', videoTitle);
-    console.log('Video Description:', videoDescription);
+    // console.log('Video Description:', videoDescription);
     console.log('Video File:', videoFile);
     console.log('Thumbnail:', thumbnail);
     // Reset form

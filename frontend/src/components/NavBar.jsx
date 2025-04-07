@@ -130,7 +130,7 @@ function NavbarDefault() {
                     Account
                   </Dropdown.Item>
                   <Dropdown.Divider />
-                  <Dropdown.Item href="/dashboard" className="py-2">
+                  <Dropdown.Item href="/shows" className="py-2">
                     Studio
                   </Dropdown.Item>
                   <Dropdown.Divider />
