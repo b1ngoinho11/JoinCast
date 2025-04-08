@@ -1,5 +1,7 @@
 .container {
   padding: 20px;
+  max-width: 900px; /* Constrain width for better readability */
+  margin: 0 auto;
 }
 
 .card {
@@ -22,10 +24,10 @@
 
 .video-container {
   text-align: center;
-  margin-top: 20px;
+  margin-bottom: 20px;
 }
 
-video {
+.video {
   width: 100%;
   max-width: 800px;
   border-radius: 10px;
@@ -38,4 +40,200 @@ video {
 
 .spinner {
   margin-top: 50px;
+}
+
+/* New Styles */
+.title {
+  font-size: 28px;
+  font-weight: bold;
+  margin: 20px 0 10px;
+}
+
+.creator-container {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.creator-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  margin-right: 10px;
+  object-fit: cover;
+}
+
+.creator-name {
+  font-size: 18px;
+  font-weight: 500;
+  color: #333;
+}
+
+.date {
+  font-size: 14px;
+  color: #777;
+  margin-bottom: 10px;
+}
+
+.duration,
+.description,
+.category {
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+
+.description strong,
+.category strong,
+.duration strong {
+  color: #333;
+}
+
+.comments-section {
+  margin-top: 30px;
+}
+
+.comments-title {
+  font-size: 22px;
+  font-weight: bold;
+  margin-bottom: 20px;
+}
+
+.comments-list {
+  max-height: 400px;
+  overflow-y: auto;
+  margin-bottom: 20px;
+  padding-right: 10px;
+}
+
+.comment {
+  border-bottom: 1px solid #eee;
+  padding: 10px 0;
+}
+
+.comment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.comment-username {
+  font-weight: 500;
+  color: #333;
+}
+
+.comment-date {
+  font-size: 12px;
+  color: #777;
+}
+
+.comment-text {
+  font-size: 14px;
+  color: #555;
+  margin: 0;
+}
+
+.comment-form {
+  margin-top: 20px;
+}
+
+.comment-form label {
+  font-weight: 500;
+  margin-bottom: 5px;
+}
+
+.comment-submit {
+  margin-top: 10px;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 576px) {
+  .title {
+    font-size: 24px;
+  }
+
+  .creator-name {
+    font-size: 16px;
+  }
+
+  .creator-avatar {
+    width: 32px;
+    height: 32px;
+  }
+
+  .video {
+    max-width: 100%;
+  }
+
+  .comments-list {
+    max-height: 300px;
+  }
+}
+
+.media-container {
+  margin-bottom: 20px;
+}
+
+/* Audio Player Styles */
+.audio-player-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.audio-thumbnail-wrapper {
+  position: relative;
+  width: 100%; /* 25% of container width */
+  padding-bottom: 50%; /* Square aspect ratio */
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.audio-thumbnail-blur {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%; /* Reduced height to match container */
+  background-size: cover;
+  background-position: center;
+  filter: blur(8px);
+  opacity: 0.8;
+}
+
+.audio-thumbnail-image {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 25%; /* Larger relative to container */
+  height: 50%; /* Larger relative to container */
+  object-fit: cover;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  z-index: 2;
+}
+
+/* Audio element styles */
+.media-container audio {
+  width: 100%;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .audio-thumbnail-wrapper {
+    width: 35%;
+    padding-bottom: 35%;
+  }
+}
+
+@media (max-width: 576px) {
+  .audio-thumbnail-wrapper {
+    width: 50%;
+    padding-bottom: 50%;
+  }
 }
