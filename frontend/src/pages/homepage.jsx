@@ -7,10 +7,13 @@ import "../css/HomePage.css";
 const HomePage = () => {
   const nowLivePodcastScroll = useRef(null);
   const trendingPodcastScroll = useRef(null);
+  const categoryScroll = useRef(null);
   const [leftLiveScroll, setLeftLiveScroll] = useState(false);
   const [leftTrendingScroll, setLeftTrendingScroll] = useState(false);
+  const [leftCategoryScroll, setLeftCategoryScroll] = useState(false);
   const [rightLiveScroll, setRightLiveScroll] = useState(true);
   const [rightTrendingScroll, setRightTrendingScroll] = useState(true);
+  const [rightCategoryScroll, setRightCategoryScroll] = useState(true);
   const [categories, setCategories] = useState([]);
   const [watchNowPodcasts, setWatchNowPodcasts] = useState([]);
   const [nowLivePodcasts, setNowLivePodcasts] = useState([]);
@@ -30,12 +33,17 @@ const HomePage = () => {
 
     if (scrollRef === nowLivePodcastScroll) {
       setLeftLiveScroll(scrollLeft > 0);
-      setRightLiveScroll(scrollLeft < scrollWidth - clientWidth);
+      setRightLiveScroll(scrollLeft < scrollWidth - clientWidth - 1);
     }
 
     if (scrollRef === trendingPodcastScroll) {
       setLeftTrendingScroll(scrollLeft > 0);
-      setRightTrendingScroll(scrollLeft < scrollWidth - clientWidth);
+      setRightTrendingScroll(scrollLeft < scrollWidth - clientWidth - 1);
+    }
+
+    if (scrollRef === categoryScroll) {
+      setLeftCategoryScroll(scrollLeft > 0);
+      setRightCategoryScroll(scrollLeft < scrollWidth - clientWidth - 1);
     }
   };
 
@@ -59,10 +67,22 @@ const HomePage = () => {
   };
 
   useEffect(() => {
+    if (categoryScroll.current) {
+      categoryScroll.current.scrollLeft = 0;
+    }
+
     updatVisibility(nowLivePodcastScroll);
     updatVisibility(trendingPodcastScroll);
+    updatVisibility(categoryScroll);
 
-    // Fetch categories from API
+    const handleResize = () => {
+      updatVisibility(nowLivePodcastScroll);
+      updatVisibility(trendingPodcastScroll);
+      updatVisibility(categoryScroll);
+    };
+
+    window.addEventListener("resize", handleResize);
+
     const fetchCategories = async () => {
       try {
         const response = await fetch(
@@ -75,7 +95,6 @@ const HomePage = () => {
         setCategories(["All", ...data]);
       } catch (error) {
         console.error("Error fetching categories:", error);
-        // Set some default categories in case of error
         setCategories([
           "All",
           "Technology",
@@ -89,7 +108,6 @@ const HomePage = () => {
 
     fetchCategories();
 
-    // Fetch episodes from API
     const fetchEpisodes = async () => {
       try {
         const response = await fetch(
@@ -100,7 +118,6 @@ const HomePage = () => {
         }
         const data = await response.json();
 
-        // Categorize episodes
         const watchNow = [];
         const nowLive = [];
         data.forEach((episode) => {
@@ -108,12 +125,12 @@ const HomePage = () => {
             id: episode.id,
             title: episode.name,
             genre: episode.categories,
-            imageUrl: `http://localhost:8000/api/v1/episodes/thumbnail/${episode.thumbnail}`, // Fetch real thumbnail
-            timeAgo: new Date(episode.created_at).toLocaleString(), // Format the date
+            imageUrl: `http://localhost:8000/api/v1/episodes/thumbnail/${episode.thumbnail}`,
+            timeAgo: new Date(episode.created_at).toLocaleString(),
             creator: {
               id: episode.creator.id,
               name: episode.creator.username,
-              imageUrl: `http://localhost:8000/api/v1/users/profile-picture/${episode.creator.profile_picture}`, // Fetch real creator image
+              imageUrl: `http://localhost:8000/api/v1/users/profile-picture/${episode.creator.profile_picture}`,
             },
             type: episode.type,
           };
@@ -134,6 +151,8 @@ const HomePage = () => {
     };
 
     fetchEpisodes();
+
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   return (
@@ -142,8 +161,10 @@ const HomePage = () => {
         <h2 className="my-4">Categories</h2>
         <div className="position-relative">
           <Row
-            className="category-row justify-content-center flex-nowrap"
-            style={{ gap: "0.5rem", overflow: "visible" }}
+            ref={categoryScroll}
+            className="category-row justify-content-start flex-nowrap scroll-hide"
+            style={{ gap: "0.5rem", overflow: "auto" }}
+            onScroll={() => updatVisibility(categoryScroll)}
           >
             {categories.map((category, index) => (
               <Col xs="auto" key={index}>
@@ -157,6 +178,28 @@ const HomePage = () => {
               </Col>
             ))}
           </Row>
+          {leftCategoryScroll && (
+            <Button
+              variant="dark"
+              className="scroll-button left"
+              onClick={() => handleScroll(categoryScroll, -200)}
+            >
+              <IoIosArrowBack
+                style={{ background: "transparent", color: "black" }}
+              />
+            </Button>
+          )}
+          {rightCategoryScroll && (
+            <Button
+              variant="dark"
+              className="scroll-button right"
+              onClick={() => handleScroll(categoryScroll, 200)}
+            >
+              <IoIosArrowForward
+                style={{ background: "transparent", color: "black" }}
+              />
+            </Button>
+          )}
         </div>
 
         <h2 className="my-4 text-left">Watch now</h2>
@@ -170,31 +213,38 @@ const HomePage = () => {
               <Col
                 key={podcast.id}
                 className="flex-shrink-0"
-                style={{ minWidth: "300px" }}
+                style={{ minWidth: "240px" }}
               >
-                <PodcastCard podcast={podcast} user={podcast.creator} link={"recording/"} />
+                <PodcastCard
+                  podcast={podcast}
+                  user={podcast.creator}
+                  link={"recording/"}
+                />
               </Col>
             ))}
           </Row>
-
-          <Button
-            variant="dark"
-            className="scroll-button left"
-            onClick={() => handleScroll(trendingPodcastScroll, -400)}
-          >
-            <IoIosArrowBack
-              style={{ background: "transparent", color: "black" }}
-            />
-          </Button>
-          <Button
-            variant="dark"
-            className="scroll-button right"
-            onClick={() => handleScroll(trendingPodcastScroll, 400)}
-          >
-            <IoIosArrowForward
-              style={{ background: "transparent", color: "black" }}
-            />
-          </Button>
+          {leftTrendingScroll && (
+            <Button
+              variant="dark"
+              className="scroll-button left"
+              onClick={() => handleScroll(trendingPodcastScroll, -400)}
+            >
+              <IoIosArrowBack
+                style={{ background: "transparent", color: "black" }}
+              />
+            </Button>
+          )}
+          {rightTrendingScroll && (
+            <Button
+              variant="dark"
+              className="scroll-button right"
+              onClick={() => handleScroll(trendingPodcastScroll, 400)}
+            >
+              <IoIosArrowForward
+                style={{ background: "transparent", color: "black" }}
+              />
+            </Button>
+          )}
         </div>
 
         <h2 className="my-4 text-left">Now Live</h2>
@@ -208,31 +258,38 @@ const HomePage = () => {
               <Col
                 key={podcast.id}
                 className="flex-shrink-0"
-                style={{ minWidth: "300px" }}
+                style={{ minWidth: "240px" }}
               >
-                <PodcastCard podcast={podcast} user={podcast.creator} link={"podcast/"} />
+                <PodcastCard
+                  podcast={podcast}
+                  user={podcast.creator}
+                  link={"podcast/"}
+                />
               </Col>
             ))}
           </Row>
-
-          <Button
-            variant="dark"
-            className="scroll-button left"
-            onClick={() => handleScroll(nowLivePodcastScroll, -400)}
-          >
-            <IoIosArrowBack
-              style={{ background: "transparent", color: "black" }}
-            />
-          </Button>
-          <Button
-            variant="dark"
-            className="scroll-button right"
-            onClick={() => handleScroll(nowLivePodcastScroll, 400)}
-          >
-            <IoIosArrowForward
-              style={{ background: "transparent", color: "black" }}
-            />
-          </Button>
+          {leftLiveScroll && (
+            <Button
+              variant="dark"
+              className="scroll-button left"
+              onClick={() => handleScroll(nowLivePodcastScroll, -400)}
+            >
+              <IoIosArrowBack
+                style={{ background: "transparent", color: "black" }}
+              />
+            </Button>
+          )}
+          {rightLiveScroll && (
+            <Button
+              variant="dark"
+              className="scroll-button right"
+              onClick={() => handleScroll(nowLivePodcastScroll, 400)}
+            >
+              <IoIosArrowForward
+                style={{ background: "transparent", color: "black" }}
+              />
+            </Button>
+          )}
         </div>
       </Container>
     </div>

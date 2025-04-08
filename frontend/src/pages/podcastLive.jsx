@@ -13,21 +13,16 @@ import {
   CircleDot,
   Hand,
   MessageSquare,
+  ArrowDown,
 } from "lucide-react";
 import api from "../services/api";
-
-const getCookie = (name) => {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop().split(";").shift();
-  return null;
-};
 
 export default function PodcastLive() {
   const { id } = useParams();
 
   const [connectionStatus, setConnectionStatus] = useState("disconnected");
   const [isCallActive, setIsCallActive] = useState(false);
+  const [episodeName, setEpisodeName] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
   const [isSpeaker, setIsSpeaker] = useState(false);
   const [pendingRequests, setPendingRequests] = useState([]);
@@ -89,7 +84,9 @@ export default function PodcastLive() {
     try {
       const response = await api.get("/api/v1/auth/me");
       console.log("User data:", response.data);
-      setUserCache((prev) => new Map(prev).set(response.data.id, response.data));
+      setUserCache((prev) =>
+        new Map(prev).set(response.data.id, response.data)
+      );
       return response.data.id;
     } catch (error) {
       console.error("Error fetching user data:", error);
@@ -98,7 +95,9 @@ export default function PodcastLive() {
   };
 
   const formatDuration = (seconds) => {
-    const minutes = Math.floor(seconds / 60).toString().padStart(2, "0");
+    const minutes = Math.floor(seconds / 60)
+      .toString()
+      .padStart(2, "0");
     const remainingSeconds = (seconds % 60).toString().padStart(2, "0");
     return `${minutes}:${remainingSeconds}`;
   };
@@ -176,6 +175,7 @@ export default function PodcastLive() {
       } else {
         setIsHost(false);
       }
+      setEpisodeName(response.data.name || "Untitled Episode");
     } catch (error) {
       console.error("Error fetching episode:", error);
     }
@@ -274,6 +274,7 @@ export default function PodcastLive() {
         case "revoke-speaker":
           if (message.recipient === clientId) {
             setIsSpeaker(false);
+            setSpeakerRequestStatus(null); // Reset the request status
             if (localStreamRef.current) {
               localStreamRef.current.getAudioTracks().forEach((track) => {
                 track.enabled = false;
@@ -303,6 +304,8 @@ export default function PodcastLive() {
                 participantsRef.current.set(clientId, participant);
                 setParticipants(Array.from(participantsRef.current.values()));
               }
+            } else {
+              setSpeakerRequestStatus(null);
             }
           }
           if (isHost && message.approved) {
@@ -496,7 +499,11 @@ export default function PodcastLive() {
     }
     try {
       screenStreamRef.current = await navigator.mediaDevices.getDisplayMedia({
-        video: { frameRate: 15, width: { ideal: 1280 }, height: { ideal: 720 } },
+        video: {
+          frameRate: 15,
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
         audio: true,
       });
       if (screenShareVideoRef.current) {
@@ -513,7 +520,8 @@ export default function PodcastLive() {
         })
       );
       const screenSharePeerConnection = new RTCPeerConnection(configuration);
-      screenSharePeerConnectionsRef.current[clientId] = screenSharePeerConnection;
+      screenSharePeerConnectionsRef.current[clientId] =
+        screenSharePeerConnection;
       screenStreamRef.current.getTracks().forEach((track) => {
         screenSharePeerConnection.addTrack(track, screenStreamRef.current);
       });
@@ -618,6 +626,10 @@ export default function PodcastLive() {
         timestamp: timestamp,
       })
     );
+    // Reset request status if it's the current user being declined
+    if (requesterId === clientId) {
+      setSpeakerRequestStatus("declined");
+    }
     setPendingRequests((prev) => prev.filter((req) => req.id !== requesterId));
   };
 
@@ -632,6 +644,10 @@ export default function PodcastLive() {
         timestamp: timestamp,
       })
     );
+    // Reset request status if it's the current user being demoted
+    if (speakerId === clientId) {
+      setSpeakerRequestStatus(null);
+    }
     setParticipants((prev) =>
       prev.map((p) => (p.id === speakerId ? { ...p, isSpeaker: false } : p))
     );
@@ -647,7 +663,8 @@ export default function PodcastLive() {
       const destination = audioContext.createMediaStreamDestination();
       remoteStreamsRef.current.forEach((remoteStream) => {
         if (remoteStream.getAudioTracks().length > 0) {
-          const remoteSource = audioContext.createMediaStreamSource(remoteStream);
+          const remoteSource =
+            audioContext.createMediaStreamSource(remoteStream);
           remoteSource.connect(destination);
           console.log("Added remote stream to recording");
         }
@@ -656,7 +673,9 @@ export default function PodcastLive() {
         localStreamRef.current &&
         localStreamRef.current.getAudioTracks().length > 0
       ) {
-        const localSource = audioContext.createMediaStreamSource(localStreamRef.current);
+        const localSource = audioContext.createMediaStreamSource(
+          localStreamRef.current
+        );
         localSource.connect(destination);
         console.log("Added local stream to recording");
       }
@@ -823,7 +842,9 @@ export default function PodcastLive() {
         );
       }
     };
-    await peerConnection.setRemoteDescription(new RTCSessionDescription(message.offer));
+    await peerConnection.setRemoteDescription(
+      new RTCSessionDescription(message.offer)
+    );
     const answer = await peerConnection.createAnswer({
       offerToReceiveAudio: true,
       offerToReceiveVideo: isScreenShare,
@@ -963,14 +984,15 @@ export default function PodcastLive() {
 
   useEffect(() => {
     if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      chatContainerRef.current.scrollTop =
+        chatContainerRef.current.scrollHeight;
     }
   }, [chatMessages]);
 
   return (
     <div className="flex flex-col items-center p-4 min-h-screen">
       <div className="w-full max-w-6xl flex justify-between items-center mb-4">
-        <h1 className="text-xl font-bold">Live Voice & Screen Sharing</h1>
+        <h1 className="text-xl font-bold">{episodeName}</h1>
         <div className="flex items-center gap-2">
           <div
             className={`w-3 h-3 rounded-full ${
@@ -1015,13 +1037,17 @@ export default function PodcastLive() {
               <div className="mb-6">
                 <h3 className="font-semibold flex items-center gap-2 mb-4 text-lg">
                   <Mic className="w-5 h-5" />
-                  Speakers ({participants.filter((p) => p.isSpeaker || p.isHost).length})
+                  Speakers (
+                  {participants.filter((p) => p.isSpeaker || p.isHost).length})
                 </h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
                   {participants
                     .filter((p) => p.isSpeaker || p.isHost)
                     .map((participant) => (
-                      <div key={participant.id} className="flex flex-col items-center gap-0">
+                      <div
+                        key={participant.id}
+                        className="flex flex-col items-center gap-0"
+                      >
                         <div className="relative">
                           {/* Optional: Display profile picture */}
                           <div
@@ -1031,7 +1057,9 @@ export default function PodcastLive() {
                               src={`http://127.0.0.1:8000/api/v1/users/profile-picture/${participant.profilePicture}`}
                               alt={participant.name}
                               className="w-full h-full rounded-full object-cover"
-                              onError={(e) => (e.target.src = "/default-avatar.png")} // Fallback image
+                              onError={(e) =>
+                                (e.target.src = "/default-avatar.png")
+                              } // Fallback image
                             />
                           </div>
                           {participant.isSpeaking && (
@@ -1049,21 +1077,16 @@ export default function PodcastLive() {
                                 Host
                               </span>
                             )}
-                            {!participant.isHost && (
-                              <span className="bg-purple-100 text-purple-800 text-xs px-2 py-0.5 rounded">
-                                Speaker
-                              </span>
-                            )}
                           </div>
                         </div>
                         {isHost && !participant.isHost && (
                           <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-500 hover:text-red-700"
+                            variant="outline"
+                            size="icon"
+                            className="rounded-full w-5 h-5 flex items-center justify-center text-red-500 hover:text-red-700"
                             onClick={() => demoteSpeaker(participant.id)}
                           >
-                            <MicOff className="h-4 w-4" />
+                            <ArrowDown className="h-4 w-4" />
                           </Button>
                         )}
                       </div>
@@ -1073,13 +1096,18 @@ export default function PodcastLive() {
               <div>
                 <h3 className="font-semibold flex items-center gap-2 mb-4 text-lg">
                   <UserPlus className="w-5 h-5" />
-                  Listeners ({participants.filter((p) => !p.isSpeaker && !p.isHost).length})
+                  Listeners (
+                  {participants.filter((p) => !p.isSpeaker && !p.isHost).length}
+                  )
                 </h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
                   {participants
                     .filter((p) => !p.isSpeaker && !p.isHost)
                     .map((participant) => (
-                      <div key={participant.id} className="flex flex-col items-center gap-0">
+                      <div
+                        key={participant.id}
+                        className="flex flex-col items-center gap-0"
+                      >
                         <div className="relative">
                           <div
                             className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-xl font-medium bg-gray-500`}
@@ -1088,7 +1116,9 @@ export default function PodcastLive() {
                               src={`http://127.0.0.1:8000/api/v1/users/profile-picture/${participant.profilePicture}`}
                               alt={participant.name}
                               className="w-full h-full rounded-full object-cover"
-                              onError={(e) => (e.target.src = "/default-avatar.png")}
+                              onError={(e) =>
+                                (e.target.src = "/default-avatar.png")
+                              }
                             />
                           </div>
                         </div>
@@ -1100,20 +1130,22 @@ export default function PodcastLive() {
                         </div>
                         {isHost &&
                           !participant.isHost &&
-                          pendingRequests.some((req) => req.id === participant.id) && (
+                          pendingRequests.some(
+                            (req) => req.id === participant.id
+                          ) && (
                             <div className="flex gap-1">
                               <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-green-500 hover:text-green-700"
+                                variant="outline"
+                                size="icon"
+                                className="rounded-full w-5 h-5 flex items-center justify-center text-green-500 hover:text-green-700"
                                 onClick={() => approveRequest(participant.id)}
                               >
                                 <Check className="h-4 w-4" />
                               </Button>
                               <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-red-500 hover:text-red-700"
+                                variant="outline"
+                                size="icon"
+                                className="rounded-full w-5 h-5 flex items-center justify-center text-red-500 hover:text-red-700"
                                 onClick={() => declineRequest(participant.id)}
                               >
                                 <X className="h-4 w-4" />
@@ -1152,10 +1184,7 @@ export default function PodcastLive() {
                           : "text-red-600"
                       }`}
                     >
-                      <CircleDot className="mr-2 h-4 w-4 animate-pulse" />
                       {speakerRequestStatus === "pending" && "Request sent"}
-                      {speakerRequestStatus === "approved" && "Request approved - you can now speak"}
-                      {speakerRequestStatus === "declined" && "Request declined"}
                     </div>
                   )}
                 </div>
@@ -1170,7 +1199,11 @@ export default function PodcastLive() {
                       isMuted ? "text-red-500" : "text-green-500"
                     }`}
                   >
-                    {isMuted ? <MicOff className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
+                    {isMuted ? (
+                      <MicOff className="h-6 w-6" />
+                    ) : (
+                      <Mic className="h-6 w-6" />
+                    )}
                   </Button>
                   <Button
                     variant="outline"
@@ -1205,14 +1238,24 @@ export default function PodcastLive() {
               <MessageSquare className="w-5 h-5" />
               Live Chat
             </h3>
-            <div ref={chatContainerRef} className="flex-1 overflow-y-auto mb-4 space-y-2">
+            <div
+              ref={chatContainerRef}
+              className="flex-1 overflow-y-auto mb-4 space-y-2"
+            >
               {chatMessages.map((msg, index) => (
                 <div
                   key={index}
-                  className={`text-sm ${msg.sender === userCache.get(clientId)?.username ? "text-right" : "text-left"}`}
+                  className={`text-sm ${
+                    msg.sender === userCache.get(clientId)?.username
+                      ? "text-right"
+                      : "text-left"
+                  }`}
                 >
                   <span className="font-medium">
-                    {msg.sender === userCache.get(clientId)?.username ? "You" : msg.sender}:
+                    {msg.sender === userCache.get(clientId)?.username
+                      ? "You"
+                      : msg.sender}
+                    :
                   </span>{" "}
                   <span>{msg.content}</span>
                   <div className="text-xs text-gray-500">

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from "react";
-import { Button, Form } from "react-bootstrap";
+import { Button, Form, Card, Alert, Spinner, Row, Col } from "react-bootstrap";
 import { AuthContext } from "../contexts/authContext";
-import api from "../services/api"; // Use the custom api instance
+import api from "../services/api";
 import genres from "../data/genreData";
 
 const LiveStream = () => {
@@ -11,6 +11,7 @@ const LiveStream = () => {
   const [selectedShowId, setSelectedShowId] = useState("");
   const [isLoadingShows, setIsLoadingShows] = useState(true);
   const [thumbnailFile, setThumbnailFile] = useState(null);
+  const [isStarting, setIsStarting] = useState(false);
   const { user } = useContext(AuthContext);
   const [error, setError] = useState(null);
 
@@ -39,6 +40,7 @@ const LiveStream = () => {
 
   const handleStartLiveStream = async (e) => {
     e.preventDefault();
+    setIsStarting(true);
     
     const formData = new FormData();
     formData.append("name", streamName);
@@ -51,7 +53,6 @@ const LiveStream = () => {
     }
 
     try {
-      // Use api instance instead of axios directly
       const response = await api.post(
         "/api/v1/episodes/live/",
         formData,
@@ -64,84 +65,119 @@ const LiveStream = () => {
 
       const episodeId = response.data.id;
       window.location.href = `http://localhost:5173/podcast/${episodeId}`;
-
-      setStreamName("");
-      setGenre("");
-      setThumbnailFile(null);
-      setError(null);
     } catch (err) {
       console.error("Error starting live stream:", err);
       setError("Failed to start live stream. Please try again.");
+    } finally {
+      setIsStarting(false);
     }
   };
 
   return (
-    <div>
-      <h3>Live Stream</h3>
-      {error && <p className="text-danger">{error}</p>}
-      <Form onSubmit={handleStartLiveStream}>
-        <Form.Group controlId="formShow">
-          <Form.Label>Select Show</Form.Label>
-          <div className="d-flex gap-2">
+    <Card className="border-0 shadow-sm">
+      <Card.Body>
+        <Card.Title className="mb-4">
+          <h3 className="fw-bold text-dark">Start a Live</h3>
+        </Card.Title>
+        
+        {error && <Alert variant="danger" className="mb-4">{error}</Alert>}
+        
+        <Form onSubmit={handleStartLiveStream}>
+          <Form.Group controlId="formShow" className="mb-3">
+            <Form.Label className="fw-semibold">Select Show</Form.Label>
+            <div className="d-flex gap-2">
+              <Form.Select
+                value={selectedShowId}
+                onChange={(e) => setSelectedShowId(e.target.value)}
+                required
+                disabled={isLoadingShows}
+                className="shadow-sm"
+              >
+                {shows.map((show) => (
+                  <option key={show.id} value={show.id}>
+                    {show.name}
+                  </option>
+                ))}
+              </Form.Select>
+              <a href="/shows">
+                <Button variant="outline-primary" disabled={isLoadingShows}>
+                  Create New Show
+                </Button>
+              </a>
+            </div>
+          </Form.Group>
+
+          <Form.Group controlId="formStreamName" className="mb-3">
+            <Form.Label className="fw-semibold">Title</Form.Label>
             <Form.Control
-              as="select"
-              value={selectedShowId}
-              onChange={(e) => setSelectedShowId(e.target.value)}
+              type="text"
+              value={streamName}
+              onChange={(e) => setStreamName(e.target.value)}
+              placeholder="Enter your stream title"
               required
-              disabled={isLoadingShows}
+              className="shadow-sm"
+            />
+          </Form.Group>
+
+          <Row className="mb-3">
+            <Col md={6}>
+              <Form.Group controlId="formGenre">
+                <Form.Label className="fw-semibold">Genre</Form.Label>
+                <Form.Select
+                  value={genre}
+                  onChange={(e) => setGenre(e.target.value)}
+                  required
+                  className="shadow-sm"
+                >
+                  <option value="">Select a genre</option>
+                  {genres.map((g) => (
+                    <option key={g.id} value={g.name}>
+                      {g.name}
+                    </option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+            </Col>
+            <Col md={6}>
+              <Form.Group controlId="formThumbnail">
+                <Form.Label className="fw-semibold">Thumbnail</Form.Label>
+                <Form.Control
+                  type="file"
+                  onChange={(e) => setThumbnailFile(e.target.files[0])}
+                  accept="image/*"
+                  className="shadow-sm"
+                />
+              </Form.Group>
+            </Col>
+          </Row>
+
+          <div className="d-grid mt-4">
+            <Button 
+              variant="primary" 
+              type="submit" 
+              size="lg"
+              disabled={isStarting || isLoadingShows}
             >
-              {shows.map((show) => (
-                <option key={show.id} value={show.id}>
-                  {show.name}
-                </option>
-              ))}
-            </Form.Control>
-            <a href="/shows">
-              <Button variant="outline-primary" disabled={isLoadingShows}>
-                Create New Show
-              </Button>
-            </a>
+              {isStarting ? (
+                <>
+                  <Spinner
+                    as="span"
+                    animation="border"
+                    size="sm"
+                    role="status"
+                    aria-hidden="true"
+                    className="me-2"
+                  />
+                  Starting...
+                </>
+              ) : (
+                'Go Live Now'
+              )}
+            </Button>
           </div>
-        </Form.Group>
-        <Form.Group controlId="formStreamName">
-          <Form.Label>Stream Name</Form.Label>
-          <Form.Control
-            type="text"
-            value={streamName}
-            onChange={(e) => setStreamName(e.target.value)}
-            placeholder="Enter stream name"
-            required
-          />
-        </Form.Group>
-        <Form.Group controlId="formThumbnail">
-          <Form.Label>Thumbnail</Form.Label>
-          <Form.Control
-            type="file"
-            onChange={(e) => setThumbnailFile(e.target.files[0])}
-            accept="image/*"
-          />
-        </Form.Group>
-        <Form.Group controlId="formGenre">
-          <Form.Label>Genre</Form.Label>
-          <Form.Control
-            as="select"
-            value={genre}
-            onChange={(e) => setGenre(e.target.value)}
-            required
-          >
-            <option value="">Select a genre</option>
-            {genres.map((g) => (
-              <option key={g.id} value={g.name}>
-                {g.name}
-              </option>
-            ))}
-          </Form.Control>
-        </Form.Group>
-        <Button type="submit" className="mt-3">
-          Start Live
-        </Button>
-      </Form>
-    </div>
+        </Form>
+      </Card.Body>
+    </Card>
   );
 };
 

@@ -2,43 +2,34 @@
 import LiveStream from '@/components/liveStream';
 import UploadVideo from '@/components/uploadVideo';
 import React, { useState } from 'react';
-import { Container, Row, Col, Card, Form, Button } from 'react-bootstrap';
+import { Container, Tab, Tabs, Card } from 'react-bootstrap';
 
 const DashboardPage = () => {
-  const [videoTitle, setVideoTitle] = useState('');
-  const [videoDescription, setVideoDescription] = useState('');
-  const [videoFile, setVideoFile] = useState(null);
-  const [thumbnail, setThumbnail] = useState('');
-
-  const handleVideoUpload = (e) => {
-    e.preventDefault();
-    // Handle video upload logic here
-    console.log('Video Title:', videoTitle);
-    // console.log('Video Description:', videoDescription);
-    console.log('Video File:', videoFile);
-    console.log('Thumbnail:', thumbnail);
-    // Reset form
-    setVideoTitle('');
-    setVideoDescription('');
-    setVideoFile(null);
-    setThumbnail('');
-  };
-
-  const handleStartLiveStream = () => {
-    // Handle live stream logic here
-    console.log('Live stream started!');
-  };
+  const [activeTab, setActiveTab] = useState('upload'); // Default to upload tab
 
   return (
-    <Container fluid>
-      <Row className="p-3">
-        <Col md={6}>
-        <UploadVideo />
-        </Col>
-        <Col md={6}>
-        <LiveStream />
-        </Col>
-      </Row>
+    <Container fluid className="p-3">
+      <Card>
+        <Card.Body>
+          <Tabs
+            activeKey={activeTab}
+            onSelect={(k) => setActiveTab(k)}
+            id="dashboard-tabs"
+            className="mb-3"
+          >
+            <Tab eventKey="upload" title="Upload Video">
+              <div className="mt-3">
+                <UploadVideo />
+              </div>
+            </Tab>
+            <Tab eventKey="live" title="Live Stream">
+              <div className="mt-3">
+                <LiveStream />
+              </div>
+            </Tab>
+          </Tabs>
+        </Card.Body>
+      </Card>
     </Container>
   );
 };

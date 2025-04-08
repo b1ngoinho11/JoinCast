@@ -1,6 +1,5 @@
-// src/createShow.js
 import { useState, useContext } from 'react';
-import { Form, Button, Alert, Spinner } from 'react-bootstrap';
+import { Form, Button, Alert, Spinner, Card } from 'react-bootstrap';
 import { AuthContext } from '../contexts/authContext';
 import api from '../services/api';
 
@@ -56,58 +55,70 @@ const CreateShow = () => {
   };
 
   return (
-    <div>
-      <h3>Create Show</h3>
-      {error && <Alert variant="danger">{error}</Alert>}
-      {success && <Alert variant="success">{success}</Alert>}
-      <Form onSubmit={handleShowCreation}>
-        <Form.Group controlId="formShowTitle" className="mb-3">
-          <Form.Label>Show Title</Form.Label>
-          <Form.Control
-            type="text"
-            value={showTitle}
-            onChange={(e) => setShowTitle(e.target.value)}
-            placeholder="Enter Show Title"
-            required
-            disabled={loading}
-          />
-        </Form.Group>
-        <Form.Group controlId="formShowDescription" className="mb-3">
-          <Form.Label>Show Description</Form.Label>
-          <Form.Control
-            as="textarea"
-            rows={3}
-            value={showDescription}
-            onChange={(e) => setShowDescription(e.target.value)}
-            placeholder="Enter Show Description"
-            required
-            disabled={loading}
-          />
-        </Form.Group>
-        <Button 
-          variant="primary" 
-          type="submit" 
-          className="w-100" 
-          disabled={loading}
-        >
-          {loading ? (
-            <>
-              <Spinner
-                as="span"
-                animation="border"
-                size="sm"
-                role="status"
-                aria-hidden="true"
-                className="me-2"
-              />
-              Creating...
-            </>
-          ) : (
-            'Create Show'
-          )}
-        </Button>
-      </Form>
-    </div>
+    <Card className="border-0 shadow-sm">
+      <Card.Body>
+        <Card.Title className="mb-4">
+          <h3 className="fw-bold text-dark">Create a New Show</h3>
+        </Card.Title>
+        
+        {error && <Alert variant="danger" className="mb-4">{error}</Alert>}
+        {success && <Alert variant="success" className="mb-4">{success}</Alert>}
+        
+        <Form onSubmit={handleShowCreation}>
+          <Form.Group controlId="formShowTitle" className="mb-3">
+            <Form.Label className="fw-semibold">Show Title</Form.Label>
+            <Form.Control
+              type="text"
+              value={showTitle}
+              onChange={(e) => setShowTitle(e.target.value)}
+              placeholder="Enter your show title"
+              required
+              disabled={loading}
+              className="shadow-sm"
+            />
+          </Form.Group>
+          
+          <Form.Group controlId="formShowDescription" className="mb-4">
+            <Form.Label className="fw-semibold">Description</Form.Label>
+            <Form.Control
+              as="textarea"
+              rows={4}
+              value={showDescription}
+              onChange={(e) => setShowDescription(e.target.value)}
+              placeholder="Tell listeners about your show"
+              required
+              disabled={loading}
+              className="shadow-sm"
+            />
+          </Form.Group>
+          
+          <div className="d-grid">
+            <Button 
+              variant="primary" 
+              type="submit" 
+              size="lg"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Spinner
+                    as="span"
+                    animation="border"
+                    size="sm"
+                    role="status"
+                    aria-hidden="true"
+                    className="me-2"
+                  />
+                  Creating...
+                </>
+              ) : (
+                'Create Show'
+              )}
+            </Button>
+          </div>
+        </Form>
+      </Card.Body>
+    </Card>
   );
 };
 
