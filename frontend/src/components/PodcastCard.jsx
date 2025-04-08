@@ -27,7 +27,7 @@ const formatTimeAgo = (timestamp) => {
 
 const PodcastCard = ({ podcast, user, link }) => {
   return (
-    <div to={`/${link}${podcast.id}`} className="card-link">
+    <Link to={`/${link}${podcast.id}`} className="card-link">
       <div className="cardBox">
         <div className="imageCard">
           <img
@@ -61,7 +61,7 @@ const PodcastCard = ({ podcast, user, link }) => {
           <span className="time">{formatTimeAgo(podcast.timeAgo)}</span>
         </div>
       </div>
-    </div>
+    </Link>
   );
 };
 
