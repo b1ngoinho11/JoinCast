@@ -2,6 +2,7 @@
 import { createBrowserRouter } from "react-router-dom";
 import HomePage from "../pages/homePage";
 import PodcastLive from "../pages/podcastLive";
+import ReplayLive from "../pages/replayLive";
 import { SignupPage, LoginPage } from "../pages/authPage";
 import Layout from "../layouts/layout";
 import FollowingPage from "../pages/followingPage";
@@ -41,6 +42,10 @@ const router = createBrowserRouter([
       {
         path: "/podcast/:id",
         element: <PodcastLive />,
+      },
+      {
+        path: "/replay/:episode_id",
+        element: <ReplayLive />,
       },
       {
         path: "/recording/:id",

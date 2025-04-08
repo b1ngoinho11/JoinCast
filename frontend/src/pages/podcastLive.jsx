@@ -998,6 +998,10 @@ export default function PodcastLive() {
       await joinRoom();
       console.log("Starting call as host:", isHost);
       await startCall();
+      if (isHost) {
+        console.log("Starting recording as host");
+        await startRecording();
+      }
     };
     setupCall();
     return () => {
