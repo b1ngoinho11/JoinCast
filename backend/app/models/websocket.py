@@ -15,6 +15,7 @@ class ConnectionManager:
         self.episode_mappings: Dict[str, str] = {}  # Room ID -> Episode ID
         self.screen_sharers: Dict[str, str] = {}  # Room ID -> User ID
         self.chat_messages: Dict[str, List[dict]] = {}  # Room ID -> list of chat messages
+        self.live_sessions: Dict[str, bool] = {}  # Room ID -> is_live status
 
     async def connect(self, websocket: WebSocket, client_id: str, room_id: str, is_host: bool = False):
         await websocket.accept()
@@ -30,6 +31,7 @@ class ConnectionManager:
             self.rooms[room_id] = set()
             self.speech_events[room_id] = []
             self.session_events[room_id] = []
+            self.live_sessions[room_id] = True  # Mark session as live when first created
         
         self.rooms[room_id].add(client_id)
         
@@ -77,19 +79,26 @@ class ConnectionManager:
                 self.record_session_event(room_id, "leave", client_id, timestamp)
             
             self.rooms[room_id].discard(client_id)
-            if not self.rooms[room_id]:
-                self.rooms.pop(room_id)
+            
+            # Only clean up room if it's no longer live
+            if not self.rooms[room_id] and not self.live_sessions.get(room_id, False):
+                self.cleanup_room(room_id)
                 
-                # Save both speech and session events for this room when it's emptied
-                if room_id in self.speech_events:
-                    self._save_logs(room_id)
-                    self.speech_events.pop(room_id)
-                    self.session_events.pop(room_id, None)
-                    
-                # Save chat messages when room is emptied
-                if room_id in self.chat_messages:
-                    self._save_chat_logs(room_id)
-                    self.chat_messages.pop(room_id)
+    def cleanup_room(self, room_id: str):
+        """Clean up room data after live session ends"""
+        self.rooms.pop(room_id, None)
+        self._save_logs(room_id)
+        self.speech_events.pop(room_id, None)
+        self.session_events.pop(room_id, None)
+        self._save_chat_logs(room_id)
+        self.chat_messages.pop(room_id, None)
+        self.live_sessions.pop(room_id, None)
+
+    def end_live_session(self, room_id: str):
+        """End a live session and clean up"""
+        self.live_sessions[room_id] = False
+        if room_id in self.rooms and not self.rooms[room_id]:
+            self.cleanup_room(room_id)
 
     def _save_logs(self, room_id: str):
         """Save speech and session events to JSON files when a room is closed"""

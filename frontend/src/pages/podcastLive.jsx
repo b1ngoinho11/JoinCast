@@ -337,6 +337,11 @@ export default function PodcastLive() {
             },
           ]);
           break;
+        case "live-ended":
+          showNotification("Live session ended by host");
+          stopCall();
+          navigate("/");
+          break;
       }
     };
   };
@@ -944,11 +949,24 @@ export default function PodcastLive() {
 
   const endLive = async () => {
     try {
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        // Send end live message through websocket
+        wsRef.current.send(
+          JSON.stringify({
+            type: "end-live",
+            sender: clientId,
+          })
+        );
+      }
+
+      // Update episode status through REST API
       await api.put(
         `/api/v1/episodes/live/end_live/${id}?creator_id=${clientId}`
       );
+
       // Stop all media and connections
       stopCall();
+
       // Redirect to homepage
       navigate("/");
     } catch (error) {

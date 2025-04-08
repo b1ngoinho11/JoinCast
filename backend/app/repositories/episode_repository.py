@@ -140,7 +140,6 @@ class EpisodeRepository(BaseRepository[Episode]):
         Get all active live episodes.
         Only returns Live episodes where is_active=True.
         """
-        print(1)
         return db.query(Live).filter(
             Live.is_active == True
         ).offset(skip).limit(limit).all()

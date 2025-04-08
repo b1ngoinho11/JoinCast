@@ -196,6 +196,31 @@ async def websocket_endpoint(
                 # Broadcast the response to all clients
                 await manager.broadcast_to_room(data, room_id, user_id)
             
+            elif message['type'] == 'end-live':
+                if is_host:  # Only host can end live session
+                    # Stop any active recording
+                    if room_id in manager.recording_sessions:
+                        filename = manager.stop_recording(room_id)
+                        if filename:
+                            episode_update = EpisodeUpdate(video=filename)
+                            episode_repository.update(db, db_obj=episode, obj_in=episode_update)
+                    
+                    # Mark live session as ended
+                    manager.end_live_session(room_id)
+                    
+                    # Broadcast end live message to all participants
+                    await manager.broadcast_to_room(
+                        json.dumps({
+                            'type': 'live-ended',
+                            'sender': user_id
+                        }),
+                        room_id,
+                        user_id
+                    )
+                    
+                    # Update episode status in database
+                    episode_update = EpisodeUpdate(is_active=False)
+                    episode_repository.update(db, db_obj=episode, obj_in=episode_update)
             else:
                 await manager.broadcast_to_room(data, room_id, user_id)
                 
