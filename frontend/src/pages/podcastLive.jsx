@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -52,6 +52,8 @@ export default function PodcastLive() {
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
   const chatContainerRef = useRef(null);
+
+  const navigate = useNavigate();
 
   const configuration = {
     iceServers: [
@@ -941,6 +943,21 @@ export default function PodcastLive() {
     setChatInput("");
   };
 
+  const endLive = async () => {
+    try {
+      await api.put(
+        `/api/v1/episodes/live/end_live/${id}?creator_id=${clientId}`
+      );
+      // Stop all media and connections
+      stopCall();
+      // Redirect to homepage
+      navigate("/");
+    } catch (error) {
+      console.error("Error ending live session:", error);
+      alert("Failed to end live session");
+    }
+  };
+
   useEffect(() => {
     const initialize = async () => {
       const userId = await fetchUserData();
@@ -1216,16 +1233,26 @@ export default function PodcastLive() {
                     <ScreenShare className="h-6 w-6" />
                   </Button>
                   {isHost && (
-                    <Button
-                      variant="outline"
-                      onClick={isRecording ? stopRecording : startRecording}
-                      disabled={!isCallActive}
-                      className={`rounded-full w-12 h-12 flex items-center justify-center p-0 ${
-                        isRecording ? "text-red-500" : "text-gray-500"
-                      }`}
-                    >
-                      <Video className="h-6 w-6" />
-                    </Button>
+                    <>
+                      <Button
+                        variant="outline"
+                        onClick={isRecording ? stopRecording : startRecording}
+                        disabled={!isCallActive}
+                        className={`rounded-full w-12 h-12 flex items-center justify-center p-0 ${
+                          isRecording ? "text-red-500" : "text-gray-500"
+                        }`}
+                      >
+                        <Video className="h-6 w-6" />
+                      </Button>
+                      {/* Add the new End Live button here */}
+                      <Button
+                        variant="destructive"
+                        onClick={endLive}
+                        className="rounded-full px-4 h-12 flex items-center justify-center gap-2"
+                      >
+                        End Live
+                      </Button>
+                    </>
                   )}
                 </>
               )}

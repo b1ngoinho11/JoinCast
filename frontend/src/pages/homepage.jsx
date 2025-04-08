@@ -127,58 +127,88 @@ const HomePage = () => {
       }
     };
 
-    fetchCategories();
-
-    const fetchEpisodes = async () => {
+    const fetchLives = async () => {
       try {
         const response = await fetch(
-          "http://localhost:8000/api/v1/episodes/?skip=0&limit=100"
+          "http://127.0.0.1:8000/api/v1/episodes/live/active/?skip=0&limit=100"
         );
         if (!response.ok) {
-          throw new Error("Failed to fetch episodes");
+          throw new Error("Failed to fetch live episodes");
         }
         const data = await response.json();
 
-        const watchNow = [];
-        const nowLive = [];
-        data.forEach((episode) => {
-          const podcast = {
-            id: episode.id,
-            title: episode.name,
-            genre: episode.categories,
-            imageUrl: `http://localhost:8000/api/v1/episodes/thumbnail/${episode.thumbnail}`,
-            timeAgo: new Date(episode.created_at).toLocaleString(),
-            creator: {
-              id: episode.creator.id,
-              name: episode.creator.username,
-              imageUrl: `http://localhost:8000/api/v1/users/profile-picture/${episode.creator.profile_picture}`,
-            },
-            type: episode.type,
-          };
-          if (episode.type === "recording") {
-            watchNow.push(podcast);
-          } else {
-            nowLive.push(podcast);
-          }
-        });
+        const nowLive = data.map((episode) => ({
+          id: episode.id,
+          title: episode.name,
+          genre: episode.categories,
+          imageUrl: `http://localhost:8000/api/v1/episodes/thumbnail/${episode.thumbnail}`,
+          timeAgo: new Date(episode.created_at).toLocaleString(),
+          creator: {
+            id: episode.creator.id,
+            name: episode.creator.username,
+            imageUrl: `http://localhost:8000/api/v1/users/profile-picture/${episode.creator.profile_picture}`,
+          },
+          type: episode.type,
+        }));
 
-        setAllWatchNowPodcasts(watchNow);
         setAllNowLivePodcasts(nowLive);
-        setWatchNowPodcasts(watchNow);
         setNowLivePodcasts(nowLive);
-
-        // Randomly select 5 podcasts for banners
-        const allPodcasts = [...watchNow, ...nowLive];
-        if (allPodcasts.length > 0) {
-          const shuffled = allPodcasts.sort(() => 0.5 - Math.random());
-          setBannerPodcasts(shuffled.slice(0, 5));
-        }
+        return nowLive;
       } catch (error) {
-        console.error("Error fetching episodes:", error);
+        console.error("Error fetching live episodes:", error);
+        return [];
       }
     };
 
-    fetchEpisodes();
+    const fetchRecordings = async () => {
+      try {
+        const response = await fetch(
+          "http://127.0.0.1:8000/api/v1/episodes/recording/?skip=0&limit=10"
+        );
+        if (!response.ok) {
+          throw new Error("Failed to fetch recordings");
+        }
+        const data = await response.json();
+
+        const watchNow = data.map((episode) => ({
+          id: episode.id,
+          title: episode.name,
+          genre: episode.categories,
+          imageUrl: `http://localhost:8000/api/v1/episodes/thumbnail/${episode.thumbnail}`,
+          timeAgo: new Date(episode.created_at).toLocaleString(),
+          creator: {
+            id: episode.creator.id,
+            name: episode.creator.username,
+            imageUrl: `http://localhost:8000/api/v1/users/profile-picture/${episode.creator.profile_picture}`,
+          },
+          type: episode.type,
+        }));
+
+        setAllWatchNowPodcasts(watchNow);
+        setWatchNowPodcasts(watchNow);
+        return watchNow;
+      } catch (error) {
+        console.error("Error fetching recordings:", error);
+        return [];
+      }
+    };
+
+    const fetchData = async () => {
+      await fetchCategories();
+      const [lives, recordings] = await Promise.all([
+        fetchLives(),
+        fetchRecordings(),
+      ]);
+
+      // Randomly select 5 podcasts for banners from both lives and recordings
+      const allPodcasts = [...recordings, ...lives];
+      if (allPodcasts.length > 0) {
+        const shuffled = allPodcasts.sort(() => 0.5 - Math.random());
+        setBannerPodcasts(shuffled.slice(0, 5));
+      }
+    };
+
+    fetchData();
 
     return () => window.removeEventListener("resize", handleResize);
   }, []);
@@ -204,7 +234,8 @@ const HomePage = () => {
           <div className="banner-container">
             <div className="banner-wrapper">
               {(() => {
-                const { prevIndex, currentIndex, nextIndex } = getBannerIndices();
+                const { prevIndex, currentIndex, nextIndex } =
+                  getBannerIndices();
                 return (
                   <>
                     {/* Previous Banner (Left) */}
@@ -219,7 +250,12 @@ const HomePage = () => {
                       <div className="banner-overlay">
                         <div className="banner-content">
                           <Row className="justify-content-center align-items-center h-100">
-                            <Col xs={12} md={8} lg={6} className="d-flex align-items-center">
+                            <Col
+                              xs={12}
+                              md={8}
+                              lg={6}
+                              className="d-flex align-items-center"
+                            >
                               <div className="banner-thumbnail-container">
                                 <img
                                   src={bannerPodcasts[prevIndex].imageUrl}
@@ -228,7 +264,9 @@ const HomePage = () => {
                                 />
                               </div>
                               <div className="banner-text">
-                                <h1 className="banner-title">{bannerPodcasts[prevIndex].title}</h1>
+                                <h1 className="banner-title">
+                                  {bannerPodcasts[prevIndex].title}
+                                </h1>
                                 <p className="banner-creator">
                                   {bannerPodcasts[prevIndex].creator.name}
                                 </p>
@@ -250,7 +288,12 @@ const HomePage = () => {
                       <div className="banner-overlay">
                         <div className="banner-content">
                           <Row className="justify-content-center align-items-center h-100">
-                            <Col xs={12} md={8} lg={6} className="d-flex align-items-center">
+                            <Col
+                              xs={12}
+                              md={8}
+                              lg={6}
+                              className="d-flex align-items-center"
+                            >
                               <div className="banner-thumbnail-container">
                                 <img
                                   src={bannerPodcasts[currentIndex].imageUrl}
@@ -259,9 +302,11 @@ const HomePage = () => {
                                 />
                               </div>
                               <div className="banner-text">
-                                <h1 className="banner-title">{bannerPodcasts[currentIndex].title}</h1>
+                                <h1 className="banner-title">
+                                  {bannerPodcasts[currentIndex].title}
+                                </h1>
                                 <p className="banner-creator">
-                                  by {bannerPodcasts[currentIndex].creator.name}
+                                  {bannerPodcasts[currentIndex].creator.name}
                                 </p>
                               </div>
                             </Col>
@@ -281,7 +326,12 @@ const HomePage = () => {
                       <div className="banner-overlay">
                         <div className="banner-content">
                           <Row className="justify-content-center align-items-center h-100">
-                            <Col xs={12} md={8} lg={6} className="d-flex align-items-center">
+                            <Col
+                              xs={12}
+                              md={8}
+                              lg={6}
+                              className="d-flex align-items-center"
+                            >
                               <div className="banner-thumbnail-container">
                                 <img
                                   src={bannerPodcasts[nextIndex].imageUrl}
@@ -290,7 +340,9 @@ const HomePage = () => {
                                 />
                               </div>
                               <div className="banner-text">
-                                <h1 className="banner-title">{bannerPodcasts[nextIndex].title}</h1>
+                                <h1 className="banner-title">
+                                  {bannerPodcasts[nextIndex].title}
+                                </h1>
                                 <p className="banner-creator">
                                   by {bannerPodcasts[nextIndex].creator.name}
                                 </p>
@@ -310,14 +362,18 @@ const HomePage = () => {
               className="banner-nav-button banner-nav-left"
               onClick={() => handleBannerNavigation("left")}
             >
-              <IoIosArrowBack style={{ background: "transparent", color: "white" }} />
+              <IoIosArrowBack
+                style={{ background: "transparent", color: "white" }}
+              />
             </Button>
             <Button
               variant="dark"
               className="banner-nav-button banner-nav-right"
               onClick={() => handleBannerNavigation("right")}
             >
-              <IoIosArrowForward style={{ background: "transparent", color: "white" }} />
+              <IoIosArrowForward
+                style={{ background: "transparent", color: "white" }}
+              />
             </Button>
           </div>
         )}

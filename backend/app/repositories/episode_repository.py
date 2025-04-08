@@ -99,6 +99,52 @@ class EpisodeRepository(BaseRepository[Episode]):
         db.refresh(db_obj)
         return db_obj
     
+    def get_recordings(self, db: Session, skip: int = 0, limit: int = 100) -> List[Recording]:
+        """
+        Get all episodes with type='recording'.
+        """
+        return db.query(Recording).offset(skip).limit(limit).all()
+
+    def get_recording(self, db: Session, id: str) -> Optional[Recording]:
+        """
+        Get a specific recording by ID.
+        """
+        return db.query(Recording).filter(
+            Recording.id == id
+        ).first()
+
+    def get_recording_by_name(self, db: Session, name: str) -> Optional[Recording]:
+        """
+        Get a specific recording by name.
+        """
+        return db.query(Recording).filter(
+            Recording.name == name
+        ).first()
+    
+    def get_live(self, db: Session, id: str) -> Live:
+        """
+        Get a live episode by ID.
+        """
+        return db.query(Live).filter(
+            Live.id == id,
+        ).first()
+
+    def get_all_live(self, db: Session, skip: int = 0, limit: int = 100) -> List[Live]:
+        """
+        Get all live episodes with pagination.
+        """
+        return db.query(Live).offset(skip).limit(limit).all()
+        
+    def get_active_live(self, db: Session, skip: int = 0, limit: int = 100) -> List[Live]:
+        """
+        Get all active live episodes.
+        Only returns Live episodes where is_active=True.
+        """
+        print(1)
+        return db.query(Live).filter(
+            Live.is_active == True
+        ).offset(skip).limit(limit).all()
+    
     def get_categories(self, db: Session) -> List[str]:
         # Get all unique categories from the Episode table as a list like ["Education", "Food"]
         categories = db.query(Episode.categories).distinct().all()

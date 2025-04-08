@@ -96,8 +96,9 @@ async def get_recordings(
 ) -> Any:
     """
     Get a list of recordings with pagination.
+    Only returns episodes with type='recording'.
     """
-    episodes = episode_repository.get_multi(db, skip=skip, limit=limit)
+    episodes = episode_repository.get_recordings(db, skip=skip, limit=limit)
     return episodes
 
 @router.get("/{episode_id}", response_model=RecordingResponse)
@@ -107,11 +108,11 @@ async def get_recording(
 ) -> Any:
     """
     Get a recording by its ID.
+    Only returns episode if type='recording'.
     """
-    episode = episode_repository.get(db, id=episode_id)
+    episode = episode_repository.get_recording(db, id=episode_id)
     if not episode:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recording not found")
-    
     return episode
 
 #get by name
@@ -122,11 +123,11 @@ async def get_recording_by_name(
 ) -> Any:
     """
     Get a recording by its name.
+    Only returns episode if type='recording'.
     """
-    episode = episode_repository.get_by_name(db, name=name)
+    episode = episode_repository.get_recording_by_name(db, name=name)
     if not episode:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recording not found")
-    
     return episode
 
 @router.put("/{episode_id}", response_model=RecordingResponse)

@@ -69,3 +69,43 @@ def end_live(
     if not episode:
         raise HTTPException(status_code=404, detail="Episode not found")
     return episode
+
+@router.get("/{episode_id}", response_model=LiveResponse)
+def get_live_episode(
+    episode_id: str,
+    db: Session = Depends(get_db)
+) -> Any:
+    """
+    Get a live episode by ID.
+    """
+    episode = episode_repository.get_live(db, id=episode_id)
+    if not episode:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Live episode not found"
+        )
+    return episode
+
+@router.get("/", response_model=List[LiveResponse])
+def get_all_live_episodes(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+) -> Any:
+    """
+    Get all live episodes with pagination.
+    """
+    episodes = episode_repository.get_all_live(db, skip=skip, limit=limit)
+    return episodes
+
+@router.get("/active/", response_model=List[LiveResponse])
+def get_all_live_episodes(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+) -> Any:
+    """
+    Get all live episodes with pagination.
+    """
+    episodes = episode_repository.get_active_live(db, skip=skip, limit=limit)
+    return episodes
