@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Container, Row, Col, Button } from "react-bootstrap";
 import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
 import PodcastCard from "../components/PodcastCard";
@@ -277,7 +278,12 @@ const HomePage = () => {
                       </div>
                     </div>
                     {/* Current Banner (Middle) */}
-                    <div
+                    <Link
+                      to={`/${
+                        bannerPodcasts[currentIndex].type === "live"
+                          ? "podcast/"
+                          : "recording/"
+                      }${bannerPodcasts[currentIndex].id}`}
                       className={`banner-item banner-middle ${
                         isAnimating ? "banner-slide" : ""
                       }`}
@@ -313,7 +319,7 @@ const HomePage = () => {
                           </Row>
                         </div>
                       </div>
-                    </div>
+                    </Link>
                     {/* Next Banner (Right) */}
                     <div
                       className={`banner-item banner-right ${
@@ -344,7 +350,7 @@ const HomePage = () => {
                                   {bannerPodcasts[nextIndex].title}
                                 </h1>
                                 <p className="banner-creator">
-                                  by {bannerPodcasts[nextIndex].creator.name}
+                                  {bannerPodcasts[nextIndex].creator.name}
                                 </p>
                               </div>
                             </Col>
