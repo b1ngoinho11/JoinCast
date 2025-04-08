@@ -14,6 +14,7 @@ const RecordingPage = () => {
   const [newComment, setNewComment] = useState("");
   const [videoDuration, setVideoDuration] = useState(null);
   const [isAudioMode, setIsAudioMode] = useState(false);
+  const [isAudioOnly, setIsAudioOnly] = useState(false);
   const videoRef = useRef(null);
   const audioRef = useRef(null);
   const [currentTime, setCurrentTime] = useState(0);
@@ -65,11 +66,23 @@ const RecordingPage = () => {
     }, 50);
   };
 
+  const checkIfAudioOnly = (url) => {
+    // Check the file extension to determine if it's audio-only
+    const audioExtensions = ['.mp3', '.wav', '.ogg', '.m4a', '.aac'];
+    const extension = url.substring(url.lastIndexOf('.')).toLowerCase();
+    return audioExtensions.includes(extension);
+  };
+
   useEffect(() => {
     const fetchRecording = async () => {
       try {
         const response = await axios.get(`${API_URL}/episodes/recording/${id}`);
         setRecordingData(response.data);
+        
+        // Check if the recording is audio-only by examining the file extension
+        const audioOnly = checkIfAudioOnly(response.data.video);
+        setIsAudioOnly(audioOnly);
+        setIsAudioMode(audioOnly); // Set to audio mode if audio-only
       } catch (err) {
         setError("Failed to fetch recording details. Please try again.");
       } finally {
@@ -206,7 +219,7 @@ const RecordingPage = () => {
                 >
                   <source
                     src={`${API_URL}/episodes/recording/video/${recordingData.video}`}
-                    type="audio/mp4"
+                    type={isAudioOnly ? "audio/mp3" : "audio/mp4"}
                   />
                   Your browser does not support the audio element.
                 </audio>
@@ -238,17 +251,19 @@ const RecordingPage = () => {
             }}
           >
             <h2 className="title">{recordingData.name}</h2>
-            <Button
-              variant="outline-primary"
-              size="m"
-              onClick={toggleMediaMode}
-            >
-              {isAudioMode ? (
-                <SquarePlay size={20} />
-              ) : (
-                <AudioLines size={20} />
-              )}
-            </Button>
+            {!isAudioOnly && (
+              <Button
+                variant="outline-primary"
+                size="m"
+                onClick={toggleMediaMode}
+              >
+                {isAudioMode ? (
+                  <SquarePlay size={20} />
+                ) : (
+                  <AudioLines size={20} />
+                )}
+              </Button>
+            )}
           </div>
 
           <div className="creator-container">

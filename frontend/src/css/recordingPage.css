@@ -42,13 +42,6 @@
   margin-top: 50px;
 }
 
-/* New Styles */
-.title {
-  font-size: 28px;
-  font-weight: bold;
-  margin: 20px 0 10px;
-}
-
 .creator-container {
   display: flex;
   align-items: center;
