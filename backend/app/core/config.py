@@ -49,6 +49,9 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 # 24 hours
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     
+    # openrouter settings
+    OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", "")
+    
     # Security settings
     VERIFY_EMAIL: bool = True
     PASSWORD_RESET_TOKEN_EXPIRE_HOURS: int = 48
