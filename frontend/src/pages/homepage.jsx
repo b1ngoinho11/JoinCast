@@ -20,6 +20,9 @@ const HomePage = () => {
   const [allWatchNowPodcasts, setAllWatchNowPodcasts] = useState([]);
   const [allNowLivePodcasts, setAllNowLivePodcasts] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [bannerPodcasts, setBannerPodcasts] = useState([]);
+  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   const handleScroll = (scrollRef, scrollOffset) => {
     if (scrollRef.current) {
@@ -27,7 +30,7 @@ const HomePage = () => {
     }
   };
 
-  const updatVisibility = (scrollRef) => {
+  const updateVisibility = (scrollRef) => {
     if (!scrollRef.current) return;
     const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
 
@@ -66,19 +69,36 @@ const HomePage = () => {
     }
   };
 
+  const handleBannerNavigation = (direction) => {
+    if (isAnimating) return;
+    setIsAnimating(true);
+
+    setCurrentBannerIndex((prevIndex) => {
+      if (direction === "next") {
+        return (prevIndex + 1) % bannerPodcasts.length;
+      } else {
+        return prevIndex === 0 ? bannerPodcasts.length - 1 : prevIndex - 1;
+      }
+    });
+
+    setTimeout(() => {
+      setIsAnimating(false);
+    }, 500);
+  };
+
   useEffect(() => {
     if (categoryScroll.current) {
       categoryScroll.current.scrollLeft = 0;
     }
 
-    updatVisibility(nowLivePodcastScroll);
-    updatVisibility(trendingPodcastScroll);
-    updatVisibility(categoryScroll);
+    updateVisibility(nowLivePodcastScroll);
+    updateVisibility(trendingPodcastScroll);
+    updateVisibility(categoryScroll);
 
     const handleResize = () => {
-      updatVisibility(nowLivePodcastScroll);
-      updatVisibility(trendingPodcastScroll);
-      updatVisibility(categoryScroll);
+      updateVisibility(nowLivePodcastScroll);
+      updateVisibility(trendingPodcastScroll);
+      updateVisibility(categoryScroll);
     };
 
     window.addEventListener("resize", handleResize);
@@ -145,6 +165,12 @@ const HomePage = () => {
         setAllNowLivePodcasts(nowLive);
         setWatchNowPodcasts(watchNow);
         setNowLivePodcasts(nowLive);
+
+        const allPodcasts = [...watchNow, ...nowLive];
+        if (allPodcasts.length > 0) {
+          const shuffled = allPodcasts.sort(() => 0.5 - Math.random());
+          setBannerPodcasts(shuffled.slice(0, 5));
+        }
       } catch (error) {
         console.error("Error fetching episodes:", error);
       }
@@ -155,16 +181,98 @@ const HomePage = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // Function to determine banner classes based on position relative to current index
+  const getBannerClass = (index) => {
+    const length = bannerPodcasts.length;
+    const diff = (index - currentBannerIndex + length) % length;
+
+    switch (diff) {
+      case 0:
+        return "banner-middle";
+      case 1:
+        return "banner-right";
+      case length - 1:
+        return "banner-left";
+      case length - 2:
+        return "banner-hidden-left";
+      case 2:
+        return "banner-hidden-right";
+      default:
+        return "banner-hidden-right"; // Default for any other position
+    }
+  };
+
   return (
     <div>
       <Container style={{ maxWidth: "90%", padding: "0" }}>
+        {/* Banner Section */}
+        {bannerPodcasts.length > 0 && (
+          <div className="banner-container">
+            <div className="banner-wrapper">
+              {bannerPodcasts.map((podcast, index) => (
+                <div
+                  key={podcast.id}
+                  className={`banner-item ${getBannerClass(index)} ${
+                    isAnimating ? "banner-slide" : ""
+                  }`}
+                  style={{
+                    backgroundImage: `url(${podcast.imageUrl})`,
+                  }}
+                >
+                  <div className="banner-overlay">
+                    <div className="banner-content">
+                      <Row className="justify-content-center align-items-center h-100">
+                        <Col
+                          xs={12}
+                          md={8}
+                          lg={6}
+                          className="d-flex align-items-center"
+                        >
+                          <div className="banner-thumbnail-container">
+                            <img
+                              src={podcast.imageUrl}
+                              alt={podcast.title}
+                              className="banner-thumbnail"
+                            />
+                          </div>
+                          <div className="banner-text">
+                            <h1 className="banner-title">{podcast.title}</h1>
+                            <p className="banner-creator">
+                              by {podcast.creator.name}
+                            </p>
+                          </div>
+                        </Col>
+                      </Row>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Navigation Buttons */}
+            <Button
+              variant="dark"
+              className="banner-nav-button banner-nav-left"
+              onClick={() => handleBannerNavigation("prev")}
+            >
+              <IoIosArrowBack style={{ background: "transparent", color: "white" }} />
+            </Button>
+            <Button
+              variant="dark"
+              className="banner-nav-button banner-nav-right"
+              onClick={() => handleBannerNavigation("next")}
+            >
+              <IoIosArrowForward style={{ background: "transparent", color: "white" }} />
+            </Button>
+          </div>
+        )}
+
         <h2 className="my-4">Categories</h2>
         <div className="position-relative">
           <Row
             ref={categoryScroll}
             className="category-row justify-content-start flex-nowrap scroll-hide"
             style={{ gap: "0.5rem", overflow: "auto" }}
-            onScroll={() => updatVisibility(categoryScroll)}
+            onScroll={() => updateVisibility(categoryScroll)}
           >
             {categories.map((category, index) => (
               <Col xs="auto" key={index}>
@@ -207,7 +315,7 @@ const HomePage = () => {
           <Row
             ref={trendingPodcastScroll}
             className="my-4 card-row flex-nowrap scroll-hide"
-            onScroll={() => updatVisibility(trendingPodcastScroll)}
+            onScroll={() => updateVisibility(trendingPodcastScroll)}
           >
             {watchNowPodcasts.map((podcast) => (
               <Col
@@ -252,7 +360,7 @@ const HomePage = () => {
           <Row
             ref={nowLivePodcastScroll}
             className="my-4 card-row flex-nowrap scroll-hide"
-            onScroll={() => updatVisibility(nowLivePodcastScroll)}
+            onScroll={() => updateVisibility(nowLivePodcastScroll)}
           >
             {nowLivePodcasts.map((podcast) => (
               <Col

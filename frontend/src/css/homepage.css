@@ -1,30 +1,128 @@
-/* Updated styles for HomePage.css */
-.card-row {
-  overflow-x: auto;
-  scroll-behavior: smooth;
-  display: flex; /* Ensure flex behavior */
-  gap: 0.25rem; /* Adjust this value to reduce the gap (e.g., 0.5rem for a smaller gap) */
+/* Banner Styles */
+.banner-container {
+  position: relative;
+  width: 100%;
+  height: 300px;
+  margin-bottom: 2rem;
+  overflow: hidden;
 }
 
-.card-row .podcast-card {
-  margin: 0; /* Remove any default margins on PodcastCard */
+.banner-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.card-row > .col {
-  padding-left: 0; /* Remove Bootstrap's default gutter padding */
-  padding-right: 0;
+.banner-item {
+  position: absolute;
+  width: 60%;
+  height: 80%;
+  border-radius: 10px;
+  transition: transform 0.5s ease, opacity 0.5s ease, z-index 0s;
+  overflow: hidden;
+  will-change: transform, opacity;
 }
 
-.scroll-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+/* Pseudo-element for blurred background */
+.banner-item::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: inherit; /* Inherits backgroundImage from .banner-item */
+  background-size: cover;
+  background-position: center;
+  filter: blur(5px); /* Apply blur to background */
+  z-index: 1; /* Below overlay and content */
 }
 
-.scroll-hide::-webkit-scrollbar {
-  display: none;
+.banner-left {
+  transform: translateX(-80%) scale(0.8);
+  z-index: 1;
+  opacity: 0.7;
 }
 
-.scroll-button {
+.banner-middle {
+  transform: translateX(0) scale(1);
+  z-index: 3;
+  opacity: 1;
+}
+
+.banner-right {
+  transform: translateX(80%) scale(0.8);
+  z-index: 1;
+  opacity: 0.7;
+}
+
+.banner-hidden-left {
+  transform: translateX(-160%) scale(0.6);
+  z-index: 0;
+  opacity: 0.3;
+}
+
+.banner-hidden-right {
+  transform: translateX(160%) scale(0.6);
+  z-index: 0;
+  opacity: 0.3;
+}
+
+.banner-slide {
+  transition: transform 0.5s ease, opacity 0.5s ease, z-index 0s;
+}
+
+.banner-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 2; /* Above blurred background, below content */
+}
+
+.banner-content {
+  position: relative;
+  z-index: 3; /* Above overlay and blurred background */
+  height: 100%;
+}
+
+.banner-thumbnail-container {
+  flex: 0 0 auto;
+  margin-right: 1.5rem;
+}
+
+.banner-thumbnail {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.banner-text {
+  flex: 1;
+  color: #fff;
+  text-align: left;
+}
+
+.banner-title {
+  font-size: 1.8rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.banner-creator {
+  font-size: 1.1rem;
+  font-weight: 400;
+  opacity: 0.9;
+}
+
+.banner-nav-button {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
@@ -34,57 +132,108 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1;
+  z-index: 4;
+  background: rgba(0, 0, 0, 0.6);
   opacity: 0.8;
-  background: #181818; /* Spotify dark */
 }
 
-.scroll-button.left {
-  left: -60px;
-}
-
-.scroll-button.right {
-  right: -60px;
-}
-
-.scroll-button:hover {
+.banner-nav-button:hover {
   opacity: 1;
 }
 
-.btn {
-  background: transparent;
+.banner-nav-left {
+  left: 20px;
 }
 
-.category-button {
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  margin-right: 0.5rem;
-  margin-bottom: 0.5rem;
-  font-size: 1rem;
-  font-weight: 500;
-  color: var(--color-text, #000);
-  background-color: var(--color-primary, #fff);
-  border: 1px solid #000;
-  cursor: pointer;
-  transition: background-color 0.2s, color 0.2s;
-  width: 200px;
+.banner-nav-right {
+  right: 20px;
 }
 
-.category-row {
-  flex-wrap: nowrap !important;
-  overflow-x: auto !important;
-  padding: 0.2rem 0 0.2rem 1rem;
-  margin: 0;
-  scroll-behavior: smooth;
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .banner-container {
+    height: 250px;
+  }
+
+  .banner-item {
+    width: 70%;
+  }
+
+  .banner-left {
+    transform: translateX(-70%) scale(0.7);
+  }
+
+  .banner-right {
+    transform: translateX(70%) scale(0.7);
+  }
+
+  .banner-hidden-left {
+    transform: translateX(-140%) scale(0.5);
+  }
+
+  .banner-hidden-right {
+    transform: translateX(140%) scale(0.5);
+  }
+
+  .banner-thumbnail {
+    width: 100px;
+    height: 100px;
+  }
+
+  .banner-title {
+    font-size: 1.5rem;
+  }
+
+  .banner-creator {
+    font-size: 1rem;
+  }
+
+  .banner-thumbnail-container {
+    margin-right: 1rem;
+  }
 }
 
-.card-link {
-  display: block;
-  text-decoration: none;
-  color: inherit;
-}
+@media (max-width: 576px) {
+  .banner-container {
+    height: 200px;
+  }
 
-.card-link:hover {
-  text-decoration: none;
-  color: inherit;
+  .banner-item {
+    width: 80%;
+  }
+
+  .banner-left {
+    transform: translateX(-60%) scale(0.6);
+  }
+
+  .banner-right {
+    transform: translateX(60%) scale(0.6);
+  }
+
+  .banner-hidden-left {
+    transform: translateX(-120%) scale(0.4);
+  }
+
+  .banner-hidden-right {
+    transform: translateX(120%) scale(0.4);
+  }
+
+  .banner-content .d-flex {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .banner-thumbnail-container {
+    margin-right: 0;
+    margin-bottom: 1rem;
+  }
+
+  .banner-title {
+    font-size: 1.2rem;
+  }
+
+  .banner-creator {
+    font-size: 0.9rem;
+  }
 }

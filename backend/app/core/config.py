@@ -69,7 +69,7 @@ class Settings(BaseSettings):
     
     # recording video settings
     MAX_VIDEO_SIZE: int = 500 * 1024 * 1024  # 500MB
-    ALLOWED_VIDEO_TYPES: List[str] = ["video/mp4", "video/x-ms-wmv", "video/x-msvideo", "video/x-flv", "video/quicktime"]
+    ALLOWED_VIDEO_TYPES: List[str] = ["video/mp4", "video/x-ms-wmv", "video/x-msvideo", "video/x-flv", "video/quicktime", 'audio/mp3', 'audio/mpeg', 'audio/wav', 'audio/ogg']
     
     class Config:
         env_file = ".env"
