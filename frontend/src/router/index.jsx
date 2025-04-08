@@ -5,7 +5,7 @@ import PodcastLive from "../pages/podcastLive";
 import ReplayLive from "../pages/replayLive";
 import { SignupPage, LoginPage } from "../pages/authPage";
 import Layout from "../layouts/layout";
-import FollowingPage from "../pages/followingPage";
+import FollowingPage from "../pages/listShowPage";
 import AccountPage from "../pages/accountPage";
 import Cookies from "js-cookie";
 import AnalyticsPage from "../pages/analyticsPage";
@@ -13,6 +13,8 @@ import ContentPage from "@/pages/contentPage";
 import EpisodesPage from "@/pages/episodesPage";
 import ShowsPage from "../pages/showsPage";
 import RecordingPage from "../pages/recordingPage";
+import ListEpisodePage from "@/pages/listEpisodePage";
+import ListShowPage from "../pages/listShowPage";
 
 const ProtectedLoader = () => {
   const token = Cookies.get("auth_token");
@@ -52,8 +54,12 @@ const router = createBrowserRouter([
         element: <RecordingPage />,
       },
       {
-        path: "/following",
-        element: <FollowingPage />,
+        path: "/list-shows",
+        element: <ListShowPage />,
+      },
+      {
+        path: "/list-shows/:id",
+        element: <ListEpisodePage />,
       },
       {
         path: "/myaccount",
@@ -95,7 +101,7 @@ const router = createBrowserRouter([
   {
     path: "/login",
     element: <LoginPage />,
-    loader : AuthLoader,
+    loader: AuthLoader,
   },
 ]);
 

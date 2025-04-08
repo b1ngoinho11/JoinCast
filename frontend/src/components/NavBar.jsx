@@ -76,8 +76,8 @@ function NavbarDefault() {
             />
           </Navbar.Brand>
           <Nav className="align-items-center">
-            <Nav.Link href="/following" className="px-2">
-              Following
+            <Nav.Link href="/list-shows" className="px-2">
+              Shows
             </Nav.Link>
             <Nav.Link href="/" className="px-2">
               Explore
