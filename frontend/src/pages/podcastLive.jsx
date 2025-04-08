@@ -939,7 +939,6 @@ export default function PodcastLive() {
       timestamp: Date.now(),
     };
     wsRef.current.send(JSON.stringify(message));
-    setChatMessages((prev) => [...prev, message]); // Add locally to avoid delay
     setChatInput("");
   };
 
@@ -1066,7 +1065,6 @@ export default function PodcastLive() {
                         className="flex flex-col items-center gap-0"
                       >
                         <div className="relative">
-                          {/* Optional: Display profile picture */}
                           <div
                             className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-xl font-medium bg-gray-500`}
                           >
@@ -1076,11 +1074,11 @@ export default function PodcastLive() {
                               className="w-full h-full rounded-full object-cover"
                               onError={(e) =>
                                 (e.target.src = "/default-avatar.png")
-                              } // Fallback image
+                              }
                             />
                           </div>
                           {participant.isSpeaking && (
-                            <div className="absolute inset-0 rounded-full border-2 border-green-500 animate-pulse" />
+                            <div className="absolute inset-0 rounded-full border-3 border-green-500 animate-pulse" />
                           )}
                         </div>
                         <div className="text-center">
@@ -1285,9 +1283,6 @@ export default function PodcastLive() {
                     :
                   </span>{" "}
                   <span>{msg.content}</span>
-                  <div className="text-xs text-gray-500">
-                    {new Date(msg.timestamp).toLocaleTimeString()}
-                  </div>
                 </div>
               ))}
             </div>

@@ -9,10 +9,10 @@ from datetime import datetime
 
 # Constants
 RECORDING_DIR = "episodes/recordings"
-LIVES_DIR = "episodes/lives"
-LIVES_LOG_DIR = "episodes/live_logs"
-SESSIONS_LOG_DIR = "episodes/session_logs"
-LIVE_COMMENTS_LOG_DIR = "episodes/live_comments_logs"
+LIVES_DIR = "recordings/lives"
+LIVES_LOG_DIR = "recordings/live_logs"
+SESSIONS_LOG_DIR = "recordings/session_logs"
+LIVE_COMMENTS_LOG_DIR = "recordings/live_comments_logs"
 
 # Create directories if they don't exist
 os.makedirs(RECORDING_DIR, exist_ok=True)
