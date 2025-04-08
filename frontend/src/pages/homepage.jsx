@@ -20,9 +20,9 @@ const HomePage = () => {
   const [allWatchNowPodcasts, setAllWatchNowPodcasts] = useState([]);
   const [allNowLivePodcasts, setAllNowLivePodcasts] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [bannerPodcasts, setBannerPodcasts] = useState([]);
-  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
-  const [isAnimating, setIsAnimating] = useState(false);
+  const [bannerPodcasts, setBannerPodcasts] = useState([]); // Array of 5 random podcasts
+  const [currentBannerIndex, setCurrentBannerIndex] = useState(0); // Tracks middle banner
+  const [isAnimating, setIsAnimating] = useState(false); // Tracks animation state
 
   const handleScroll = (scrollRef, scrollOffset) => {
     if (scrollRef.current) {
@@ -30,7 +30,7 @@ const HomePage = () => {
     }
   };
 
-  const updateVisibility = (scrollRef) => {
+  const updatVisibility = (scrollRef) => {
     if (!scrollRef.current) return;
     const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
 
@@ -70,17 +70,18 @@ const HomePage = () => {
   };
 
   const handleBannerNavigation = (direction) => {
-    if (isAnimating) return;
+    if (isAnimating) return; // Prevent multiple clicks during animation
     setIsAnimating(true);
 
     setCurrentBannerIndex((prevIndex) => {
-      if (direction === "next") {
-        return (prevIndex + 1) % bannerPodcasts.length;
-      } else {
+      if (direction === "left") {
         return prevIndex === 0 ? bannerPodcasts.length - 1 : prevIndex - 1;
+      } else {
+        return prevIndex === bannerPodcasts.length - 1 ? 0 : prevIndex + 1;
       }
     });
 
+    // Reset animation state after transition duration (500ms)
     setTimeout(() => {
       setIsAnimating(false);
     }, 500);
@@ -91,14 +92,14 @@ const HomePage = () => {
       categoryScroll.current.scrollLeft = 0;
     }
 
-    updateVisibility(nowLivePodcastScroll);
-    updateVisibility(trendingPodcastScroll);
-    updateVisibility(categoryScroll);
+    updatVisibility(nowLivePodcastScroll);
+    updatVisibility(trendingPodcastScroll);
+    updatVisibility(categoryScroll);
 
     const handleResize = () => {
-      updateVisibility(nowLivePodcastScroll);
-      updateVisibility(trendingPodcastScroll);
-      updateVisibility(categoryScroll);
+      updatVisibility(nowLivePodcastScroll);
+      updatVisibility(trendingPodcastScroll);
+      updatVisibility(categoryScroll);
     };
 
     window.addEventListener("resize", handleResize);
@@ -166,6 +167,7 @@ const HomePage = () => {
         setWatchNowPodcasts(watchNow);
         setNowLivePodcasts(nowLive);
 
+        // Randomly select 5 podcasts for banners
         const allPodcasts = [...watchNow, ...nowLive];
         if (allPodcasts.length > 0) {
           const shuffled = allPodcasts.sort(() => 0.5 - Math.random());
@@ -181,25 +183,17 @@ const HomePage = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Function to determine banner classes based on position relative to current index
-  const getBannerClass = (index) => {
-    const length = bannerPodcasts.length;
-    const diff = (index - currentBannerIndex + length) % length;
-
-    switch (diff) {
-      case 0:
-        return "banner-middle";
-      case 1:
-        return "banner-right";
-      case length - 1:
-        return "banner-left";
-      case length - 2:
-        return "banner-hidden-left";
-      case 2:
-        return "banner-hidden-right";
-      default:
-        return "banner-hidden-right"; // Default for any other position
-    }
+  // Function to get banner indices
+  const getBannerIndices = () => {
+    const prevIndex =
+      currentBannerIndex === 0
+        ? bannerPodcasts.length - 1
+        : currentBannerIndex - 1;
+    const nextIndex =
+      currentBannerIndex === bannerPodcasts.length - 1
+        ? 0
+        : currentBannerIndex + 1;
+    return { prevIndex, currentIndex: currentBannerIndex, nextIndex };
   };
 
   return (
@@ -209,57 +203,119 @@ const HomePage = () => {
         {bannerPodcasts.length > 0 && (
           <div className="banner-container">
             <div className="banner-wrapper">
-              {bannerPodcasts.map((podcast, index) => (
-                <div
-                  key={podcast.id}
-                  className={`banner-item ${getBannerClass(index)} ${
-                    isAnimating ? "banner-slide" : ""
-                  }`}
-                  style={{
-                    backgroundImage: `url(${podcast.imageUrl})`,
-                  }}
-                >
-                  <div className="banner-overlay">
-                    <div className="banner-content">
-                      <Row className="justify-content-center align-items-center h-100">
-                        <Col
-                          xs={12}
-                          md={8}
-                          lg={6}
-                          className="d-flex align-items-center"
-                        >
-                          <div className="banner-thumbnail-container">
-                            <img
-                              src={podcast.imageUrl}
-                              alt={podcast.title}
-                              className="banner-thumbnail"
-                            />
-                          </div>
-                          <div className="banner-text">
-                            <h1 className="banner-title">{podcast.title}</h1>
-                            <p className="banner-creator">
-                              by {podcast.creator.name}
-                            </p>
-                          </div>
-                        </Col>
-                      </Row>
+              {(() => {
+                const { prevIndex, currentIndex, nextIndex } = getBannerIndices();
+                return (
+                  <>
+                    {/* Previous Banner (Left) */}
+                    <div
+                      className={`banner-item banner-left ${
+                        isAnimating ? "banner-slide" : ""
+                      }`}
+                      style={{
+                        backgroundImage: `url(${bannerPodcasts[prevIndex].imageUrl})`,
+                      }}
+                    >
+                      <div className="banner-overlay">
+                        <div className="banner-content">
+                          <Row className="justify-content-center align-items-center h-100">
+                            <Col xs={12} md={8} lg={6} className="d-flex align-items-center">
+                              <div className="banner-thumbnail-container">
+                                <img
+                                  src={bannerPodcasts[prevIndex].imageUrl}
+                                  alt={bannerPodcasts[prevIndex].title}
+                                  className="banner-thumbnail"
+                                />
+                              </div>
+                              <div className="banner-text">
+                                <h1 className="banner-title">{bannerPodcasts[prevIndex].title}</h1>
+                                <p className="banner-creator">
+                                  {bannerPodcasts[prevIndex].creator.name}
+                                </p>
+                              </div>
+                            </Col>
+                          </Row>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              ))}
+                    {/* Current Banner (Middle) */}
+                    <div
+                      className={`banner-item banner-middle ${
+                        isAnimating ? "banner-slide" : ""
+                      }`}
+                      style={{
+                        backgroundImage: `url(${bannerPodcasts[currentIndex].imageUrl})`,
+                      }}
+                    >
+                      <div className="banner-overlay">
+                        <div className="banner-content">
+                          <Row className="justify-content-center align-items-center h-100">
+                            <Col xs={12} md={8} lg={6} className="d-flex align-items-center">
+                              <div className="banner-thumbnail-container">
+                                <img
+                                  src={bannerPodcasts[currentIndex].imageUrl}
+                                  alt={bannerPodcasts[currentIndex].title}
+                                  className="banner-thumbnail"
+                                />
+                              </div>
+                              <div className="banner-text">
+                                <h1 className="banner-title">{bannerPodcasts[currentIndex].title}</h1>
+                                <p className="banner-creator">
+                                  by {bannerPodcasts[currentIndex].creator.name}
+                                </p>
+                              </div>
+                            </Col>
+                          </Row>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Next Banner (Right) */}
+                    <div
+                      className={`banner-item banner-right ${
+                        isAnimating ? "banner-slide" : ""
+                      }`}
+                      style={{
+                        backgroundImage: `url(${bannerPodcasts[nextIndex].imageUrl})`,
+                      }}
+                    >
+                      <div className="banner-overlay">
+                        <div className="banner-content">
+                          <Row className="justify-content-center align-items-center h-100">
+                            <Col xs={12} md={8} lg={6} className="d-flex align-items-center">
+                              <div className="banner-thumbnail-container">
+                                <img
+                                  src={bannerPodcasts[nextIndex].imageUrl}
+                                  alt={bannerPodcasts[nextIndex].title}
+                                  className="banner-thumbnail"
+                                />
+                              </div>
+                              <div className="banner-text">
+                                <h1 className="banner-title">{bannerPodcasts[nextIndex].title}</h1>
+                                <p className="banner-creator">
+                                  by {bannerPodcasts[nextIndex].creator.name}
+                                </p>
+                              </div>
+                            </Col>
+                          </Row>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
             {/* Navigation Buttons */}
             <Button
               variant="dark"
               className="banner-nav-button banner-nav-left"
-              onClick={() => handleBannerNavigation("prev")}
+              onClick={() => handleBannerNavigation("left")}
             >
               <IoIosArrowBack style={{ background: "transparent", color: "white" }} />
             </Button>
             <Button
               variant="dark"
               className="banner-nav-button banner-nav-right"
-              onClick={() => handleBannerNavigation("next")}
+              onClick={() => handleBannerNavigation("right")}
             >
               <IoIosArrowForward style={{ background: "transparent", color: "white" }} />
             </Button>
@@ -272,7 +328,7 @@ const HomePage = () => {
             ref={categoryScroll}
             className="category-row justify-content-start flex-nowrap scroll-hide"
             style={{ gap: "0.5rem", overflow: "auto" }}
-            onScroll={() => updateVisibility(categoryScroll)}
+            onScroll={() => updatVisibility(categoryScroll)}
           >
             {categories.map((category, index) => (
               <Col xs="auto" key={index}>
@@ -315,7 +371,7 @@ const HomePage = () => {
           <Row
             ref={trendingPodcastScroll}
             className="my-4 card-row flex-nowrap scroll-hide"
-            onScroll={() => updateVisibility(trendingPodcastScroll)}
+            onScroll={() => updatVisibility(trendingPodcastScroll)}
           >
             {watchNowPodcasts.map((podcast) => (
               <Col
@@ -360,7 +416,7 @@ const HomePage = () => {
           <Row
             ref={nowLivePodcastScroll}
             className="my-4 card-row flex-nowrap scroll-hide"
-            onScroll={() => updateVisibility(nowLivePodcastScroll)}
+            onScroll={() => updatVisibility(nowLivePodcastScroll)}
           >
             {nowLivePodcasts.map((podcast) => (
               <Col
