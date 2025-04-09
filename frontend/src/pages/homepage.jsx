@@ -489,25 +489,24 @@ const HomePage = () => {
 
         <h2 className="my-4 text-left">Watch now</h2>
         <div className="position-relative">
-          <Row
+          <div
             ref={trendingPodcastScroll}
-            className="my-4 card-row flex-nowrap scroll-hide"
+            className="podcast-row"
             onScroll={() => updatVisibility(trendingPodcastScroll)}
           >
             {watchNowPodcasts.map((podcast) => (
-              <Col
+              <div
                 key={podcast.id}
-                className="flex-shrink-0"
-                style={{ minWidth: "240px" }}
+                className="podcast-card-wrapper"
               >
                 <PodcastCard
                   podcast={podcast}
                   user={podcast.creator}
                   link={"recording/"}
                 />
-              </Col>
+              </div>
             ))}
-          </Row>
+          </div>
           {leftTrendingScroll && (
             <Button
               variant="dark"
@@ -534,25 +533,24 @@ const HomePage = () => {
 
         <h2 className="my-4 text-left">Now Live</h2>
         <div className="position-relative">
-          <Row
+          <div
             ref={nowLivePodcastScroll}
-            className="my-4 card-row flex-nowrap scroll-hide"
+            className="podcast-row"
             onScroll={() => updatVisibility(nowLivePodcastScroll)}
           >
             {nowLivePodcasts.map((podcast) => (
-              <Col
+              <div
                 key={podcast.id}
-                className="flex-shrink-0"
-                style={{ minWidth: "240px" }}
+                className="podcast-card-wrapper"
               >
                 <PodcastCard
                   podcast={podcast}
                   user={podcast.creator}
                   link={"podcast/"}
                 />
-              </Col>
+              </div>
             ))}
-          </Row>
+          </div>
           {leftLiveScroll && (
             <Button
               variant="dark"
@@ -594,25 +592,24 @@ const HomePage = () => {
 
         <h2 className="my-4 text-left">Replays</h2>
         <div className="position-relative">
-          <Row
+          <div
             ref={replayPodcastScroll}
-            className="my-4 card-row flex-nowrap scroll-hide"
+            className="podcast-row"
             onScroll={() => updatVisibility(replayPodcastScroll)}
           >
             {replayPodcasts.map((podcast) => (
-              <Col
+              <div
                 key={podcast.id}
-                className="flex-shrink-0"
-                style={{ minWidth: "240px" }}
+                className="podcast-card-wrapper"
               >
                 <PodcastCard
                   podcast={podcast}
                   user={podcast.creator}
                   link={"replay/"}
                 />
-              </Col>
+              </div>
             ))}
-          </Row>
+          </div>
           {leftReplayScroll && (
             <Button
               variant="dark"
