@@ -6,11 +6,10 @@ import {
   Mic,
   MicOff,
   ScreenShare,
-  Video,
+  Text,
   UserPlus,
   Check,
   X,
-  CircleDot,
   Hand,
   MessageSquare,
   ArrowDown,
@@ -265,53 +264,65 @@ export default function PodcastLive() {
         case "screen-share-stopped":
           handleScreenShareStopped(message);
           break;
-          case "request-screen-share-offer":
-            if (message.recipient === clientId && isSharing) {
-              console.log(`Received request-screen-share-offer from ${message.sender}`);
-              if (!screenStreamRef.current) {
-                console.error("No screen stream available to share");
-                return;
-              }
-              const screenSharePeerConnection = new RTCPeerConnection(configuration);
-              screenSharePeerConnectionsRef.current[message.sender] = screenSharePeerConnection;
-              console.log(`Adding tracks to peer connection for ${message.sender}`);
-              screenStreamRef.current.getTracks().forEach((track) => {
-                console.log(`Adding track: ${track.kind}, enabled: ${track.enabled}`);
-                screenSharePeerConnection.addTrack(track, screenStreamRef.current);
-              });
-              screenSharePeerConnection.onicecandidate = (event) => {
-                if (event.candidate) {
-                  console.log(`Sending ICE candidate to ${message.sender}`);
-                  wsRef.current.send(
-                    JSON.stringify({
-                      type: "ice-candidate",
-                      candidate: event.candidate,
-                      sender: clientId,
-                      recipient: message.sender,
-                      streamType: "screen",
-                    })
-                  );
-                }
-              };
-              screenSharePeerConnection.onconnectionstatechange = () => {
-                console.log(
-                  `Screen share connection state for ${message.sender}: ${screenSharePeerConnection.connectionState}`
-                );
-              };
-              const offer = await screenSharePeerConnection.createOffer();
-              await screenSharePeerConnection.setLocalDescription(offer);
-              console.log(`Sending offer to ${message.sender}`);
-              wsRef.current.send(
-                JSON.stringify({
-                  type: "offer",
-                  offer: offer,
-                  sender: clientId,
-                  recipient: message.sender,
-                  streamType: "screen",
-                })
-              );
+        case "request-screen-share-offer":
+          if (message.recipient === clientId && isSharing) {
+            console.log(
+              `Received request-screen-share-offer from ${message.sender}`
+            );
+            if (!screenStreamRef.current) {
+              console.error("No screen stream available to share");
+              return;
             }
-            break;
+            const screenSharePeerConnection = new RTCPeerConnection(
+              configuration
+            );
+            screenSharePeerConnectionsRef.current[message.sender] =
+              screenSharePeerConnection;
+            console.log(
+              `Adding tracks to peer connection for ${message.sender}`
+            );
+            screenStreamRef.current.getTracks().forEach((track) => {
+              console.log(
+                `Adding track: ${track.kind}, enabled: ${track.enabled}`
+              );
+              screenSharePeerConnection.addTrack(
+                track,
+                screenStreamRef.current
+              );
+            });
+            screenSharePeerConnection.onicecandidate = (event) => {
+              if (event.candidate) {
+                console.log(`Sending ICE candidate to ${message.sender}`);
+                wsRef.current.send(
+                  JSON.stringify({
+                    type: "ice-candidate",
+                    candidate: event.candidate,
+                    sender: clientId,
+                    recipient: message.sender,
+                    streamType: "screen",
+                  })
+                );
+              }
+            };
+            screenSharePeerConnection.onconnectionstatechange = () => {
+              console.log(
+                `Screen share connection state for ${message.sender}: ${screenSharePeerConnection.connectionState}`
+              );
+            };
+            const offer = await screenSharePeerConnection.createOffer();
+            await screenSharePeerConnection.setLocalDescription(offer);
+            console.log(`Sending offer to ${message.sender}`);
+            wsRef.current.send(
+              JSON.stringify({
+                type: "offer",
+                offer: offer,
+                sender: clientId,
+                recipient: message.sender,
+                streamType: "screen",
+              })
+            );
+          }
+          break;
         case "speaker-request":
           console.log("Speaker request received:", message);
           if (isHost) {
@@ -424,7 +435,9 @@ export default function PodcastLive() {
 
   const requestScreenShareOffer = (screenSharerId) => {
     if (!wsRef.current || !clientId) {
-      console.error("Cannot request screen-share offer: WebSocket or client ID missing");
+      console.error(
+        "Cannot request screen-share offer: WebSocket or client ID missing"
+      );
       return;
     }
     console.log(`Sending request-screen-share-offer to ${screenSharerId}`);
@@ -1327,18 +1340,15 @@ export default function PodcastLive() {
                   >
                     <ScreenShare className="h-6 w-6" />
                   </Button>
+                  {/* New Button */}
+                  <Button
+                    variant="outline"
+                    className={`rounded-full w-12 h-12 flex items-center justify-center p-0}`}
+                  >
+                    <Text className="h-6 w-6" />
+                  </Button>
                   {isHost && (
                     <>
-                      <Button
-                        variant="outline"
-                        onClick={isRecording ? stopRecording : startRecording}
-                        disabled={!isCallActive}
-                        className={`rounded-full w-12 h-12 flex items-center justify-center p-0 ${
-                          isRecording ? "text-red-500" : "text-gray-500"
-                        }`}
-                      >
-                        <Video className="h-6 w-6" />
-                      </Button>
                       {/* Add the new End Live button here */}
                       <Button
                         variant="destructive"
