@@ -21,6 +21,7 @@ class EpisodeRepository(BaseRepository[Episode]):
             comments=obj_in.comments,
             categories=obj_in.categories,
         )
+        db_obj.generate_transcript() # Generate transcript if video is provided
         db.add(db_obj)
         db.commit()
         db.refresh(db_obj)
@@ -155,5 +156,49 @@ class EpisodeRepository(BaseRepository[Episode]):
     def get_by_category(self, db: Session, category: str) -> List[Episode]:
         episodes = db.query(Episode).filter(Episode.categories == category).all()
         return episodes
+    
+    def generate_and_save_transcript(self, db: Session, *, episode_id: str) -> Optional[Episode]:
+        """
+        Generate transcript for a recording episode and save it to the database.
+        """
+        # Get the episode
+        episode = self.get(db, id=episode_id)
+        if not episode or not isinstance(episode, Recording) or not episode.video:
+            return None
+            
+        # Generate the transcript
+        transcript_text = episode.generate_transcript()
+        if not transcript_text:
+            return None
+            
+        # Save the transcript to the database
+        episode.transcript = transcript_text
+        db.add(episode)
+        db.commit()
+        db.refresh(episode)
+        return episode
+    
+    def update_transcript(self, db: Session, *, episode_id: str, transcript: str) -> Optional[Episode]:
+        """
+        Update the transcript for an episode.
+        """
+        episode = self.get(db, id=episode_id)
+        if not episode:
+            return None
+            
+        episode.transcript = transcript
+        db.add(episode)
+        db.commit()
+        db.refresh(episode)
+        return episode
+        
+    def get_transcript(self, db: Session, *, episode_id: str) -> Optional[str]:
+        """
+        Get the transcript for an episode.
+        """
+        episode = self.get(db, id=episode_id)
+        if not episode:
+            return None
+        return episode.transcript
     
 episode_repository = EpisodeRepository(Episode)

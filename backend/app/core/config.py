@@ -49,6 +49,9 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 # 24 hours
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     
+    # openrouter settings
+    OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", "")
+    
     # Security settings
     VERIFY_EMAIL: bool = True
     PASSWORD_RESET_TOKEN_EXPIRE_HOURS: int = 48
@@ -58,6 +61,7 @@ class Settings(BaseSettings):
     
     # File upload settings
     UPLOAD_DIR: Path = Path("uploads")
+    UPLOAD_RECORDING_DIR : Path = Path("uploads/videos")
     DEFAULT_PROFILE_PICS_DIR: Path = Path("static/default_profile_pics")
     MAX_PROFILE_PICTURE_SIZE: int = 10 * 1024 * 1024  # 10MB
     ALLOWED_PROFILE_PICTURE_TYPES: List[str] = ["image/jpeg", "image/png", "image/gif"]
@@ -68,7 +72,7 @@ class Settings(BaseSettings):
     ALLOWED_THUMBNAIL_TYPES: List[str] = ["image/jpeg", "image/png", "image/gif"]
     
     # recording video settings
-    MAX_VIDEO_SIZE: int = 500 * 1024 * 1024  # 500MB
+    MAX_VIDEO_SIZE: int = 1000 * 1024 * 1024  # 1GB
     ALLOWED_VIDEO_TYPES: List[str] = ["video/mp4", "video/x-ms-wmv", "video/x-msvideo", "video/x-flv", "video/quicktime", 'audio/mp3', 'audio/mpeg', 'audio/wav', 'audio/ogg']
     
     class Config:

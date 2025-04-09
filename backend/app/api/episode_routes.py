@@ -95,4 +95,29 @@ async def get_thumbnail_picture(filename: str):
     
     return FileResponse(file_path)
 
+@router.get("/summaries/{episode_id}", response_model=str)
+def get_episode_summary(
+    episode_id: str,
+    db: Session = Depends(get_db)
+) -> str:
+    episode = episode_repository.get(db, id=episode_id)
+    if not episode:
+        raise HTTPException(status_code=404, detail="Episode not found")
+    
+    # Ensure the summary is a valid string
+    summary = episode.generate_summary()  # Adjust this line based on your model
+    return summary
 
+@router.get("/ai-assistant/{episode_id}", response_model=str)
+def get_episode_ai_assistant(
+    episode_id: str,
+    question: str,
+    db: Session = Depends(get_db)
+) -> str:
+    episode = episode_repository.get(db, id=episode_id)
+    if not episode:
+        raise HTTPException(status_code=404, detail="Episode not found")
+    
+    # Ensure the AI assistant response is a valid string
+    ai_response = episode.ask_ai_assistant(question=question)
+    return ai_response
