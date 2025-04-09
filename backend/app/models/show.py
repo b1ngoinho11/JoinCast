@@ -19,3 +19,27 @@ class Show(BaseModel):
     
     def __str__(self):
         return f"{self.id} {self.name}"
+    
+    def add_episode_to_show(self, episode):
+        self.episodes.append(episode)
+        episode.show = self
+        return episode
+    
+    def get_episodes(self):
+        return self.episodes
+    
+    def get_creator(self):
+        return self.creator
+    
+    def get_show_details(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "description": self.description,
+            "creator_id": self.creator_id
+        }
+        
+    def get_show_episodes(self):
+        return [episode.get_episode_details() for episode in self.episodes]
+    
+    

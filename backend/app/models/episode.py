@@ -1,5 +1,5 @@
 # app/models/episode.py
-from sqlalchemy import Boolean, Column, String, ForeignKey
+from sqlalchemy import Boolean, Column, String, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 from sqlalchemy import Table
 from app.db.base import BaseModel
@@ -7,6 +7,7 @@ import uuid
 from openai import OpenAI
 from app.core.config import settings
 import json
+
 
 class Episode(BaseModel):
     __tablename__ = "episodes"
@@ -26,6 +27,7 @@ class Episode(BaseModel):
     
     video = Column(String, nullable=True)  # This will store the filename of the uploaded video
     transcript = Column(String, nullable=True)  # Add transcript column
+    likes = Column(Integer, default=0)  # Number of likes
     
     # Relationships
     show = relationship("Show", back_populates="episodes")
@@ -180,6 +182,20 @@ class Episode(BaseModel):
         except Exception as e:
             return f"AI Assistant error: {str(e)}"
 
+    def add_like(self):
+        """
+        Increment the like count for the episode.
+        """
+        self.likes += 1
+        return self.likes
+    
+    def remove_like(self):
+        """
+        Decrement the like count for the episode.
+        """
+        if self.likes > 0:
+            self.likes -= 1
+        return self.likes
 
 # Define secondary tables *after* Episode to avoid premature table definition
 live_speakers = Table(
@@ -210,12 +226,44 @@ class Recording(Episode):
     """A recorded episode that can be played back."""
     __tablename__ = None
     __mapper_args__ = {"polymorphic_identity": "recording"}
-
-    comments = Column(String, nullable=True)
+    
+    # Store comments as JSON string
+    comments = Column(String, nullable=True)  
+    # store as list
+    # commnets = Column(list, nullable=True)  # Store comments as a list
+    # comments = relationship("Comment", back_populates="episode")
+    
 
     def __str__(self):
         return f"{self.id} {self.name} (Recording)"
-
+    
+    def add_comment(self, user_id: str, content: str):
+        """
+        Add a comment to the episode.
+        # """
+        # if not self.comments:
+        #     self.comments = []
+        # else:
+        #     self.comments = json.loads(self.comments)
+        
+        # comment = {
+        #     "user_id": user_id,
+        #     "content": content,
+        #     "timestamp": datetime.utcnow().isoformat()
+        # }
+        
+        # self.comments.append(comment)
+        # self.comments = json.dumps(self.comments)
+        
+        # return comment
+    
+        pass
+    def get_comments(self):
+        """
+        Get all comments for the episode.
+        """
+        return self.comments
+    
 
 class Live(Episode):
     """A live episode that can have active participants."""
@@ -237,3 +285,26 @@ class Live(Episode):
 
     def __str__(self):
         return f"{self.id} {self.name} (Live)"
+    
+    def add_user(self, user):
+        """
+        Add a user to the episode.
+        """
+        self.listeners.append(user)
+        return user
+    
+    def start_live(self):
+        """
+        Start the live episode.
+        """
+        self.is_active = True
+        return self.is_active
+    
+    def end_live(self):
+        """
+        End the live episode.
+        """
+        self.is_active = False
+        return self.is_active
+    
+    

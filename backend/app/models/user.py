@@ -23,3 +23,27 @@ class User(BaseModel):
     
     def __str__(self):
         return f"{self.id} {self.email} ({self.username})"
+    
+    def create_show(self, show):
+        self.shows.append(show)
+        show.creator = self
+        return show
+    
+    def get_shows(self):
+        return self.shows
+    
+    def get_episodes(self):
+        return self.episodes
+    
+    def join_live(self, live):
+        self.live_speaking.append(live)
+        live.speakers.append(self)
+        return live
+    
+    def leave_live(self, live):
+        self.live_speaking.remove(live)
+        live.speakers.remove(self)
+        return live
+    
+    
+    
