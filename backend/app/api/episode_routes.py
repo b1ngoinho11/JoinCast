@@ -121,3 +121,16 @@ def get_episode_ai_assistant(
     # Ensure the AI assistant response is a valid string
     ai_response = episode.ask_ai_assistant(question=question)
     return ai_response
+
+@router.get("/quiz/{episode_id}", response_model=str)
+def get_episode_quiz(
+    episode_id: str,
+    db: Session = Depends(get_db)
+) -> str:
+    episode = episode_repository.get(db, id=episode_id)
+    if not episode:
+        raise HTTPException(status_code=404, detail="Episode not found")
+    
+    # Ensure the quiz is a valid string
+    quiz = episode.generate_quiz()
+    return quiz

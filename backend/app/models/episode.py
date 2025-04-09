@@ -197,6 +197,74 @@ class Episode(BaseModel):
             self.likes -= 1
         return self.likes
 
+    def generate_quiz(self):
+        if not self.transcript:
+            return "No transcript available"
+        try:
+            # Initialize OpenAI client with OpenRouter base URL
+            client = OpenAI(
+                base_url="https://openrouter.ai/api/v1",
+                api_key=settings.OPENROUTER_API_KEY,
+            )
+            
+            # Call the AI assistant
+            completion = client.chat.completions.create(
+                extra_body={},
+                model="deepseek/deepseek-chat-v3-0324:free",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": f"""
+                        Generate exactly 10 quiz questions about this video transcript following this EXACT format:
+                        - First 5 questions MUST be multiple choice with exactly 4 options each
+                        - Mark the correct answer with * after the option text
+                        - Next 5 questions MUST be short answer (one word or short phrase)
+                        - Use this exact numbering and formatting:
+
+                        1. [Multiple choice question?]
+                        - A) [Option 1]
+                        - B) [Option 2]
+                        - C) [Correct Option]*
+                        - D) [Option 4]
+                        - Answer: [Correct Option]
+
+                        2. [Multiple choice question?]
+                        - A) [Option 1]
+                        - B) [Correct Option]*
+                        - C) [Option 3]
+                        - D) [Option 4]
+                        - Answer: [Correct Option]
+
+                        ...
+
+                        6. [Short answer question?]
+                        - Answer: [One word/short phrase]
+
+                        7. [Short answer question?]
+                        - Answer: [One word/short phrase]
+
+                        ...
+
+                        Important Rules:
+                        - ALWAYS include exactly 10 questions
+                        - First 5 MUST be multiple choice with 4 options each
+                        - Next 5 MUST be short answer
+                        - Maintain this EXACT formatting
+                        - Questions should test important facts from the video
+
+                        Transcript:
+                        {self.transcript}
+                        """
+                    }
+                ]
+            )
+            
+            # Get the answer from the response
+            answer = completion.choices[0].message.content
+            return answer
+        except Exception as e:
+            return f"Quiz ai Assistant error: {str(e)}"
+
 # Define secondary tables *after* Episode to avoid premature table definition
 live_speakers = Table(
     "live_speakers",

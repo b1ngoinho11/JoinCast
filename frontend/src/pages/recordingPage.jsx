@@ -6,6 +6,7 @@ import { Spinner, Alert, Card, Form, Button, Image } from "react-bootstrap";
 import "../css/recordingPage.css";
 import PodcastAIAssistant from "../components/PodcastAIAssistant";
 import SummaryCard from "../components/summaryCard";
+import QuizComponent from "../components/QuizComponent";
 
 const RecordingPage = () => {
   const { id } = useParams();
@@ -359,6 +360,9 @@ const RecordingPage = () => {
                     }}
                   />
                 )}
+
+                {/* In the left column section, after the SummaryCard */}
+                <QuizComponent episodeId={recordingData.id} />
               </div>
             </Card.Body>
           </Card>
