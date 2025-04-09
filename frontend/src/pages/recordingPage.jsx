@@ -349,7 +349,18 @@ const RecordingPage = () => {
             </Button>
             
             {summary && (
-              <SummaryCard summary={summary} />
+              // In your RecordingPage component, update the SummaryCard usage:
+              <SummaryCard 
+                summary={summary} 
+                onTimestampClick={(seconds) => {
+                  const player = isAudioMode ? audioRef.current : videoRef.current;
+                  if (player) {
+                    player.currentTime = seconds;
+                    player.play();
+                    setIsPlaying(true);
+                  }
+                }}
+              />
             )}
           </div>
         </Card.Body>

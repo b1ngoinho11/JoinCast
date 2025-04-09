@@ -1,27 +1,54 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Card } from 'react-bootstrap';
-import '../css/summaryCard.css'; // Import your CSS file for styling'
+import '../css/summaryCard.css';
 
-const SummaryCard = ({ summary }) => {
+const SummaryCard = ({ summary, onTimestampClick }) => {
   if (!summary) return null;
 
   const [displayedContent, setDisplayedContent] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
-  const typeSpeed = 10; // milliseconds per character
+  const [timestampNavigation, setTimestampNavigation] = useState([]);
+  const typeSpeed = 10;
   const contentRef = useRef(summary);
 
-  // Start typing animation when summary changes
+  // Parse timestamp navigation and extract main content
   useEffect(() => {
     if (summary) {
+      // Extract timestamp navigation if present
+      const timestampRegex = /\[TIMESTAMP_NAVIGATION\](.*?)\[\/TIMESTAMP_NAVIGATION\]/s;
+      const match = summary.match(timestampRegex);
+      
+      if (match && match[1]) {
+        const navContent = match[1].trim();
+        const navItems = navContent.split('\n').filter(line => line.trim().startsWith('- ['));
+        
+        const parsedNav = navItems.map(item => {
+          const timeMatch = item.match(/\[(\d{2}:\d{2}:\d{2})\]/);
+          const description = item.replace(/^-\s*\[\d{2}:\d{2}:\d{2}\]\s*/, '').trim();
+          
+          return {
+            time: timeMatch ? timeMatch[1] : '',
+            description: description
+          };
+        }).filter(item => item.time);
+        
+        setTimestampNavigation(parsedNav);
+        
+        // Remove the navigation section from the main content
+        contentRef.current = summary.replace(timestampRegex, '').trim();
+      } else {
+        contentRef.current = summary;
+      }
+
+      // Start typing animation
       setIsTyping(true);
       setDisplayedContent('');
-      contentRef.current = summary;
-
+      
       let i = 0;
       const typeInterval = setInterval(() => {
-        if (i < summary.length) {
-          setDisplayedContent(prev => prev + summary.charAt(i));
+        if (i < contentRef.current.length) {
+          setDisplayedContent(prev => prev + contentRef.current.charAt(i));
           i++;
         } else {
           clearInterval(typeInterval);
@@ -32,6 +59,24 @@ const SummaryCard = ({ summary }) => {
       return () => clearInterval(typeInterval);
     }
   }, [summary]);
+
+  // Helper function to convert timestamp to seconds
+  const timestampToSeconds = (timestamp) => {
+    const parts = timestamp.split(':').map(part => parseInt(part));
+    if (parts.length === 3) {
+      return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    } else if (parts.length === 2) {
+      return parts[0] * 60 + parts[1];
+    }
+    return 0;
+  };
+
+  // Handle timestamp click
+  const handleTimestampClick = (timestamp) => {
+    if (onTimestampClick) {
+      onTimestampClick(timestampToSeconds(timestamp));
+    }
+  };
 
   // Helper function to render formatted content
   const renderFormattedContent = () => {
@@ -137,6 +182,26 @@ const SummaryCard = ({ summary }) => {
       </Card.Header>
       {!isMinimized && (
         <Card.Body className="summary-body">
+          {/* Timestamp Navigation Section */}
+          {timestampNavigation.length > 0 && (
+            <div className="timestamp-navigation mb-4">
+              <h5 className="fw-bold mb-3">Jump to Section</h5>
+              <div className="list-group">
+                {timestampNavigation.map((item, index) => (
+                  <button
+                    key={index}
+                    className="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+                    onClick={() => handleTimestampClick(item.time)}
+                  >
+                    <span>{item.description}</span>
+                    <span className="badge bg-primary rounded-pill">{item.time}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Main Summary Content */}
           <div className={`summary-content ${isTyping ? 'typing' : ''}`}>
             {renderFormattedContent()}
             {isTyping && <span className="cursor"></span>}

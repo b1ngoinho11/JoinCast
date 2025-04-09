@@ -93,7 +93,9 @@ class Episode(BaseModel):
                     {
                         "role": "user",
                         "content": f"""
-                        Create a structured summary of this video transcript with the following format:
+                        Create two outputs for this video transcript:
+
+                        1. A structured summary with the following format:
                         
                         # [Main Title]
                         
@@ -104,6 +106,13 @@ class Episode(BaseModel):
                         **Key Details**
                         – [Important detail 1]
                         – [Important detail 2]
+
+                        2. A timestamp navigation table in this format:
+                        [TIMESTAMP_NAVIGATION]
+                        - [XX:XX:XX] Topic description
+                        - [XX:XX:XX] Another topic
+                        - [XX:XX:XX] Key point
+                        [/TIMESTAMP_NAVIGATION]
                         
                         Formatting rules:
                         1. Use # only for the main title
