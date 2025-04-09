@@ -94,6 +94,7 @@ const ListEpisodePage = () => {
             <Row>
               <Col md={9}>
                 <h1>{show.name}</h1>
+                <h5 className="text-muted">{episodes.length} episodes</h5>
                 <p className="text-muted">{show.description}</p>
                 <div className="d-flex align-items-center mt-3">
                   <img
