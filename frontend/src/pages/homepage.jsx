@@ -3,27 +3,34 @@ import { Link } from "react-router-dom";
 import { Container, Row, Col, Button } from "react-bootstrap";
 import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
 import PodcastCard from "../components/PodcastCard";
+import ShowCard from "../components/ShowCard"; // Adjusted import path
 import "../css/HomePage.css";
 
 const HomePage = () => {
   const nowLivePodcastScroll = useRef(null);
   const trendingPodcastScroll = useRef(null);
   const categoryScroll = useRef(null);
+  const replayPodcastScroll = useRef(null);
   const [leftLiveScroll, setLeftLiveScroll] = useState(false);
   const [leftTrendingScroll, setLeftTrendingScroll] = useState(false);
   const [leftCategoryScroll, setLeftCategoryScroll] = useState(false);
+  const [leftReplayScroll, setLeftReplayScroll] = useState(false);
   const [rightLiveScroll, setRightLiveScroll] = useState(true);
   const [rightTrendingScroll, setRightTrendingScroll] = useState(true);
   const [rightCategoryScroll, setRightCategoryScroll] = useState(true);
+  const [rightReplayScroll, setRightReplayScroll] = useState(true);
   const [categories, setCategories] = useState([]);
   const [watchNowPodcasts, setWatchNowPodcasts] = useState([]);
   const [nowLivePodcasts, setNowLivePodcasts] = useState([]);
+  const [replayPodcasts, setReplayPodcasts] = useState([]);
   const [allWatchNowPodcasts, setAllWatchNowPodcasts] = useState([]);
   const [allNowLivePodcasts, setAllNowLivePodcasts] = useState([]);
+  const [allReplayPodcasts, setAllReplayPodcasts] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [bannerPodcasts, setBannerPodcasts] = useState([]); // Array of 5 random podcasts
-  const [currentBannerIndex, setCurrentBannerIndex] = useState(0); // Tracks middle banner
-  const [isAnimating, setIsAnimating] = useState(false); // Tracks animation state
+  const [bannerPodcasts, setBannerPodcasts] = useState([]);
+  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [randomShow, setRandomShow] = useState(null);
 
   const handleScroll = (scrollRef, scrollOffset) => {
     if (scrollRef.current) {
@@ -49,6 +56,11 @@ const HomePage = () => {
       setLeftCategoryScroll(scrollLeft > 0);
       setRightCategoryScroll(scrollLeft < scrollWidth - clientWidth - 1);
     }
+
+    if (scrollRef === replayPodcastScroll) {
+      setLeftReplayScroll(scrollLeft > 0);
+      setRightReplayScroll(scrollLeft < scrollWidth - clientWidth - 1);
+    }
   };
 
   const handleCategorySelect = (category) => {
@@ -57,6 +69,7 @@ const HomePage = () => {
     if (category === "All") {
       setWatchNowPodcasts(allWatchNowPodcasts);
       setNowLivePodcasts(allNowLivePodcasts);
+      setReplayPodcasts(allReplayPodcasts);
     } else {
       const filteredWatchNow = allWatchNowPodcasts.filter((podcast) =>
         podcast.genre.includes(category)
@@ -64,14 +77,18 @@ const HomePage = () => {
       const filteredNowLive = allNowLivePodcasts.filter((podcast) =>
         podcast.genre.includes(category)
       );
+      const filteredReplays = allReplayPodcasts.filter((podcast) =>
+        podcast.genre.includes(category)
+      );
 
       setWatchNowPodcasts(filteredWatchNow);
       setNowLivePodcasts(filteredNowLive);
+      setReplayPodcasts(filteredReplays);
     }
   };
 
   const handleBannerNavigation = (direction) => {
-    if (isAnimating) return; // Prevent multiple clicks during animation
+    if (isAnimating) return;
     setIsAnimating(true);
 
     setCurrentBannerIndex((prevIndex) => {
@@ -82,7 +99,6 @@ const HomePage = () => {
       }
     });
 
-    // Reset animation state after transition duration (500ms)
     setTimeout(() => {
       setIsAnimating(false);
     }, 500);
@@ -96,11 +112,13 @@ const HomePage = () => {
     updatVisibility(nowLivePodcastScroll);
     updatVisibility(trendingPodcastScroll);
     updatVisibility(categoryScroll);
+    updatVisibility(replayPodcastScroll);
 
     const handleResize = () => {
       updatVisibility(nowLivePodcastScroll);
       updatVisibility(trendingPodcastScroll);
       updatVisibility(categoryScroll);
+      updatVisibility(replayPodcastScroll);
     };
 
     window.addEventListener("resize", handleResize);
@@ -131,33 +149,53 @@ const HomePage = () => {
     const fetchLives = async () => {
       try {
         const response = await fetch(
-          "http://127.0.0.1:8000/api/v1/episodes/live/active/?skip=0&limit=100"
+          "http://127.0.0.1:8000/api/v1/episodes/live/?skip=0&limit=100"
         );
         if (!response.ok) {
           throw new Error("Failed to fetch live episodes");
         }
         const data = await response.json();
 
-        const nowLive = data.map((episode) => ({
-          id: episode.id,
-          title: episode.name,
-          genre: episode.categories,
-          imageUrl: `http://localhost:8000/api/v1/episodes/thumbnail/${episode.thumbnail}`,
-          timeAgo: new Date(episode.created_at).toLocaleString(),
-          creator: {
-            id: episode.creator.id,
-            name: episode.creator.username,
-            imageUrl: `http://localhost:8000/api/v1/users/profile-picture/${episode.creator.profile_picture}`,
-          },
-          type: episode.type,
-        }));
+        const nowLive = data
+          .filter((episode) => episode.is_active)
+          .map((episode) => ({
+            id: episode.id,
+            title: episode.name,
+            genre: episode.categories,
+            imageUrl: `http://localhost:8000/api/v1/episodes/thumbnail/${episode.thumbnail}`,
+            timeAgo: new Date(episode.created_at).toLocaleString(),
+            creator: {
+              id: episode.creator.id,
+              name: episode.creator.username,
+              imageUrl: `http://localhost:8000/api/v1/users/profile-picture/${episode.creator.profile_picture}`,
+            },
+            type: episode.type,
+          }));
+
+        const replays = data
+          .filter((episode) => !episode.is_active)
+          .map((episode) => ({
+            id: episode.id,
+            title: episode.name,
+            genre: episode.categories,
+            imageUrl: `http://localhost:8000/api/v1/episodes/thumbnail/${episode.thumbnail}`,
+            timeAgo: new Date(episode.created_at).toLocaleString(),
+            creator: {
+              id: episode.creator.id,
+              name: episode.creator.username,
+              imageUrl: `http://localhost:8000/api/v1/users/profile-picture/${episode.creator.profile_picture}`,
+            },
+            type: episode.type,
+          }));
 
         setAllNowLivePodcasts(nowLive);
         setNowLivePodcasts(nowLive);
-        return nowLive;
+        setAllReplayPodcasts(replays);
+        setReplayPodcasts(replays);
+        return { nowLive, replays };
       } catch (error) {
         console.error("Error fetching live episodes:", error);
-        return [];
+        return { nowLive: [], replays: [] };
       }
     };
 
@@ -194,15 +232,39 @@ const HomePage = () => {
       }
     };
 
+    const fetchShows = async () => {
+      try {
+        const response = await fetch(
+          "http://127.0.0.1:8000/api/v1/shows/?skip=0&limit=10"
+        );
+        if (!response.ok) {
+          throw new Error("Failed to fetch shows");
+        }
+        const data = await response.json();
+        
+        // Randomly select one show
+        if (data.length > 0) {
+          const randomIndex = Math.floor(Math.random() * data.length);
+          return data[randomIndex];
+        }
+        return null;
+      } catch (error) {
+        console.error("Error fetching shows:", error);
+        return null;
+      }
+    };
+
     const fetchData = async () => {
       await fetchCategories();
-      const [lives, recordings] = await Promise.all([
+      const [{ nowLive, replays }, recordings, show] = await Promise.all([
         fetchLives(),
         fetchRecordings(),
+        fetchShows(),
       ]);
 
-      // Randomly select 5 podcasts for banners from both lives and recordings
-      const allPodcasts = [...recordings, ...lives];
+      setRandomShow(show);
+
+      const allPodcasts = [...recordings, ...nowLive, ...replays];
       if (allPodcasts.length > 0) {
         const shuffled = allPodcasts.sort(() => 0.5 - Math.random());
         setBannerPodcasts(shuffled.slice(0, 5));
@@ -214,7 +276,6 @@ const HomePage = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Function to get banner indices
   const getBannerIndices = () => {
     const prevIndex =
       currentBannerIndex === 0
@@ -226,6 +287,8 @@ const HomePage = () => {
         : currentBannerIndex + 1;
     return { prevIndex, currentIndex: currentBannerIndex, nextIndex };
   };
+
+  console.log(randomShow)
 
   return (
     <div>
@@ -239,7 +302,6 @@ const HomePage = () => {
                   getBannerIndices();
                 return (
                   <>
-                    {/* Previous Banner (Left) */}
                     <div
                       className={`banner-item banner-left ${
                         isAnimating ? "banner-slide" : ""
@@ -277,7 +339,6 @@ const HomePage = () => {
                         </div>
                       </div>
                     </div>
-                    {/* Current Banner (Middle) */}
                     <Link
                       to={`/${
                         bannerPodcasts[currentIndex].type === "live"
@@ -320,7 +381,6 @@ const HomePage = () => {
                         </div>
                       </div>
                     </Link>
-                    {/* Next Banner (Right) */}
                     <div
                       className={`banner-item banner-right ${
                         isAnimating ? "banner-slide" : ""
@@ -362,7 +422,6 @@ const HomePage = () => {
                 );
               })()}
             </div>
-            {/* Navigation Buttons */}
             <Button
               variant="dark"
               className="banner-nav-button banner-nav-left"
@@ -510,6 +569,66 @@ const HomePage = () => {
               variant="dark"
               className="scroll-button right"
               onClick={() => handleScroll(nowLivePodcastScroll, 400)}
+            >
+              <IoIosArrowForward
+                style={{ background: "transparent", color: "black" }}
+              />
+            </Button>
+          )}
+        </div>
+
+        <h2 className="my-4 text-left">Today's Pick Shows</h2>
+        <div className="position-relative">
+          <Row className="my-4 card-row">
+            {randomShow ? (
+              <Col className="flex-shrink-0" style={{ minWidth: "240px" }}>
+                <ShowCard show={randomShow} />
+              </Col>
+            ) : (
+              <Col>
+                <p>No show available for today's pick.</p>
+              </Col>
+            )}
+          </Row>
+        </div>
+
+        <h2 className="my-4 text-left">Replays</h2>
+        <div className="position-relative">
+          <Row
+            ref={replayPodcastScroll}
+            className="my-4 card-row flex-nowrap scroll-hide"
+            onScroll={() => updatVisibility(replayPodcastScroll)}
+          >
+            {replayPodcasts.map((podcast) => (
+              <Col
+                key={podcast.id}
+                className="flex-shrink-0"
+                style={{ minWidth: "240px" }}
+              >
+                <PodcastCard
+                  podcast={podcast}
+                  user={podcast.creator}
+                  link={"replay/"}
+                />
+              </Col>
+            ))}
+          </Row>
+          {leftReplayScroll && (
+            <Button
+              variant="dark"
+              className="scroll-button left"
+              onClick={() => handleScroll(replayPodcastScroll, -400)}
+            >
+              <IoIosArrowBack
+                style={{ background: "transparent", color: "black" }}
+              />
+            </Button>
+          )}
+          {rightReplayScroll && (
+            <Button
+              variant="dark"
+              className="scroll-button right"
+              onClick={() => handleScroll(replayPodcastScroll, 400)}
             >
               <IoIosArrowForward
                 style={{ background: "transparent", color: "black" }}
