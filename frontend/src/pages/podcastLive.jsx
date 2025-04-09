@@ -248,6 +248,12 @@ export default function PodcastLive() {
         case "recording-stopped":
           handleRecordingStopped(message);
           break;
+        case "temp-recording-created":
+          showNotification(`Temporary recording saved: ${message.filename}`);
+          break;
+        case "temp-recording-error":
+          showNotification(`Error: ${message.message}`);
+          break;
         case "user-joined":
           await handleUserJoined(message);
           break;
@@ -853,6 +859,23 @@ export default function PodcastLive() {
     }
   };
 
+  const createTempRecording = () => {
+    if (!wsRef.current || !isRecording) {
+      console.error(
+        "Cannot create temp recording: WebSocket not connected or not recording"
+      );
+      return;
+    }
+    wsRef.current.send(
+      JSON.stringify({
+        type: "create-temp-recording",
+        sender: clientId,
+        timestamp: Date.now(),
+      })
+    );
+    showNotification("Temporary recording checkpoint created");
+  };
+
   const createOffer = async () => {
     const peerConnection = new RTCPeerConnection(configuration);
     peerConnectionsRef.current[clientId] = peerConnection;
@@ -1343,7 +1366,11 @@ export default function PodcastLive() {
                   {/* New Button */}
                   <Button
                     variant="outline"
-                    className={`rounded-full w-12 h-12 flex items-center justify-center p-0}`}
+                    onClick={createTempRecording}
+                    disabled={!isRecording}
+                    className={`rounded-full w-12 h-12 flex items-center justify-center p-0 ${
+                      isRecording ? "text-blue-500" : "text-gray-500"
+                    }`}
                   >
                     <Text className="h-6 w-6" />
                   </Button>

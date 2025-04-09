@@ -288,6 +288,47 @@ def stop_live_recording(recording_info: Dict) -> str:
         print(f"Error processing recording: {e}")
         return None
     
+def create_temp_recording(recording_info: Dict) -> Optional[str]:
+    """
+    Create a temporary recording file in MP4 format from the current recording session without stopping it.
+    
+    Args:
+        recording_info: The recording session info
+        
+    Returns:
+        The path to the temporary MP4 file, or None if failed
+    """
+    if not recording_info or not recording_info.get('is_recording', False):
+        return None
+    
+    try:
+        # Generate temporary file names
+        temp_filename = recording_info['temp_filename']
+        base_name = os.path.splitext(os.path.basename(temp_filename))[0]
+        temp_summary_filename = f"{LIVES_DIR}/summary_{base_name}.mp4"  # Changed to .mp4
+        
+        # Flush current file handle to ensure all data is written
+        recording_info['file_handle'].flush()
+        
+        # Convert the current temp WebM file to MP4 using FFmpeg
+        subprocess.run([
+            'ffmpeg',
+            '-i', temp_filename,
+            '-c:v', 'libx264',
+            '-preset', 'fast',
+            '-crf', '23',
+            '-c:a', 'aac',
+            '-b:a', '128k',
+            '-y',  # Overwrite output file if it exists
+            temp_summary_filename
+        ], check=True)
+        
+        print(f"Temporary MP4 recording saved: {temp_summary_filename}")
+        return temp_summary_filename
+    except Exception as e:
+        print(f"Error creating temporary MP4 recording: {e}")
+        return None
+    
 def save_chat_logs(room_id: str, chat_messages: list, episode_id: Optional[str] = None) -> str:
     """
     Save chat messages to a JSON file.

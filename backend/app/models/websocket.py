@@ -3,7 +3,7 @@ from fastapi import WebSocket
 from typing import Dict, Set, List, Optional
 from datetime import datetime
 import json
-from app.utils.episode_file_handler import start_live_recording, add_audio_chunk, stop_live_recording, save_logs, add_video_chunk, save_chat_logs
+from app.utils.episode_file_handler import start_live_recording, add_audio_chunk, stop_live_recording, save_logs, add_video_chunk, save_chat_logs, create_temp_recording
 
 class ConnectionManager:
     def __init__(self):
@@ -138,6 +138,13 @@ class ConnectionManager:
             
         self.session_events[room_id].append(event)
         return event
+    
+    def create_temp_recording(self, room_id: str) -> Optional[str]:
+        """Create a temporary recording checkpoint for the live session"""
+        if room_id in self.recording_sessions and self.recording_sessions[room_id]['is_recording']:
+            recording_info = self.recording_sessions[room_id]
+            return create_temp_recording(recording_info)
+        return None
 
     def record_speech_event(self, room_id: str, client_id: str, is_speaking: bool, 
                           timestamp: float, speaking_start: float = None):

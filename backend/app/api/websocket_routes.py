@@ -204,6 +204,24 @@ async def websocket_endpoint(
                 # Broadcast the response to all clients
                 await manager.broadcast_to_room(data, room_id, user_id)
             
+            elif message['type'] == 'create-temp-recording':
+                temp_filename = manager.create_temp_recording(room_id)
+                if temp_filename:
+                    await websocket.send_text(
+                        json.dumps({
+                            'type': 'temp-recording-created',
+                            'filename': temp_filename,
+                            'timestamp': message.get('timestamp')
+                        })
+                    )
+                else:
+                    await websocket.send_text(
+                        json.dumps({
+                            'type': 'temp-recording-error',
+                            'message': 'Failed to create temporary recording'
+                        })
+                    )
+            
             elif message['type'] == 'end-live':
                 if is_host:  # Only host can end live session
                     # Stop any active recording
