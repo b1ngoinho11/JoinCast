@@ -140,6 +140,46 @@ class Episode(BaseModel):
             
         return summary
         
+    def ask_ai_assistant(self, question: str):
+        if not self.transcript:
+            return "No transcript available"
+        try:
+            # Initialize OpenAI client with OpenRouter base URL
+            client = OpenAI(
+                base_url="https://openrouter.ai/api/v1",
+                api_key=settings.OPENROUTER_API_KEY,
+            )
+            
+            # Call the AI assistant
+            completion = client.chat.completions.create(
+                extra_body={},
+                model="deepseek/deepseek-chat-v3-0324:free",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": f"""
+                        You are an AI assistant that can answer questions based on a video transcript.
+                        You must answer with only plain text and no markdown no asterisks.
+                        Your answer should be short as possible.
+                        You can answer outside the transcript if you know the answer.
+                        
+                        Answer the question based on the transcript provided below:
+
+                        Question: {question}
+
+                        Transcript:
+                        {self.transcript}                    
+                        """
+                    }
+                ]
+            )
+            
+            # Get the answer from the response
+            answer = completion.choices[0].message.content
+            return answer
+        except Exception as e:
+            return f"AI Assistant error: {str(e)}"
+
 
 # Define secondary tables *after* Episode to avoid premature table definition
 live_speakers = Table(

@@ -4,10 +4,7 @@ import { useParams } from "react-router-dom";
 import axios from "axios";
 import { Spinner, Alert, Card, Form, Button, Image } from "react-bootstrap";
 import "../css/recordingPage.css";
-// import PodcastChatBox from "../components/PodcastChatBox";
-// import DynamicPodcastSummary from './DynamicPodcastSummary';
-// import SimplePodcastSummary from '../components/DynamicPodcastSummary';
-// import AIGeneratedSummary from "../components/AIGeneratedSummary";
+import PodcastAIAssistant from "../components/PodcastAIAssistant";
 import SummaryCard from "../components/summaryCard";
 
 const RecordingPage = () => {
@@ -192,8 +189,6 @@ const RecordingPage = () => {
     }
   };
 
-  // summary = "### **Summary of the Video/Podcast Episode:** **Main Topic (Timestamp: 00:00:00 – 00:01:25)** – A high-performance drag race featuring four modified supercars (Porsche 911 GT3, Ferrari 812 Superfast, Lamborghini Aventador SV, and Lamborghini Revuelto) fitted with **Gintani exhausts**, making them extremely loud. The event takes place at a special noise-unrestricted location for standing quarter-mile races. - **Cars & Specs:** - **Lamborghini Aventador SV** (6.5L V12, 750 HP, AWD) - **Lamborghini Revuelto** (6.5L V12 + hybrid, 1,015 HP, AWD) - **Ferrari 812 Superfast** (6.5L V12, 800 HP, RWD) - **Porsche 911 GT3** (4.0L Flat-6, 510 HP, RWD) - **Key Details:** - All cars feature **performance exhaust upgrades** and **launch control**. - Commentary by **Matt Watson**, presenter of **Carwow**. - The drag race will determine the fastest car in a **quarter-mile sprint**. *(The transcript cuts off before the actual race begins.)*"
-
   if (loading) {
     return (
       <div className="text-center spinner">
@@ -213,203 +208,211 @@ const RecordingPage = () => {
   }
 
   return (
-    <div className="container">
-      <Card className="card">
-        <Card.Body>
-          {/* Media Player */}
-          <div className="media-container">
-            {isAudioMode ? (
-              <div className="audio-player-container">
-                <div className="audio-thumbnail-wrapper">
-                  <div
-                    className="audio-thumbnail-blur"
-                    style={{
-                      backgroundImage: `url(${API_URL}/episodes/thumbnail/${recordingData.thumbnail})`,
-                    }}
-                  ></div>
-                  <img
-                    src={`${API_URL}/episodes/thumbnail/${recordingData.thumbnail}`}
-                    alt={recordingData.name}
-                    className="audio-thumbnail-image"
-                  />
-                </div>
-                <audio
-                  controls
-                  className="w-100"
-                  ref={audioRef}
-                  onTimeUpdate={handleTimeUpdate}
-                  onPlay={() => setIsPlaying(true)}
-                  onPause={() => setIsPlaying(false)}
-                >
-                  <source
-                    src={`${API_URL}/episodes/recording/video/${recordingData.video}`}
-                    type={isAudioOnly ? "audio/mp3" : "audio/mp4"}
-                  />
-                  Your browser does not support the audio element.
-                </audio>
-              </div>
-            ) : (
-              <video
-                controls
-                className="video"
-                ref={videoRef}
-                onTimeUpdate={handleTimeUpdate}
-                onPlay={() => setIsPlaying(true)}
-                onPause={() => setIsPlaying(false)}
-              >
-                <source
-                  src={`${API_URL}/episodes/recording/video/${recordingData.video}`}
-                  type="video/mp4"
-                />
-                Your browser does not support the video tag.
-              </video>
-            )}
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
-            <h2 className="title">{recordingData.name}</h2>
-            {!isAudioOnly && (
-              <Button
-                variant="outline-primary"
-                size="m"
-                onClick={toggleMediaMode}
-              >
+    <div className="container" style={{ maxWidth: "100%" }}>
+      <div className="row">
+        {/* Left Section: Video, Summary */}
+        <div className="col-md-8">
+          <Card className="card">
+            <Card.Body>
+              {/* Media Player */}
+              <div className="media-container">
                 {isAudioMode ? (
-                  <SquarePlay size={20} />
-                ) : (
-                  <AudioLines size={20} />
-                )}
-              </Button>
-            )}
-          </div>
-
-          <div className="creator-container">
-            <Image
-              src={
-                recordingData.creator.profile_picture
-                  ? `${API_URL}/users/profile-picture/${recordingData.creator.profile_picture}`
-                  : "https://via.placeholder.com/40"
-              }
-              alt={recordingData.creator.username}
-              className="creator-avatar"
-            />
-            <span className="creator-name">
-              {recordingData.creator.username}
-            </span>
-          </div>
-
-          <p className="date">
-            {new Date(recordingData.created_at).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-            })}
-            &nbsp;•&nbsp;{formatDuration(videoDuration)}
-          </p>
-
-          <p className="category">
-            <strong>
-              {Array.isArray(recordingData.categories)
-                ? recordingData.categories.join(", ")
-                : recordingData.categories}
-            </strong>
-          </p>
-
-          <p className="description">{recordingData.show.description}</p>
-          
-          {/* AI Summary Section */}
-          <div className="summary-section mt-3">
-            <Button 
-              variant="outline-secondary" 
-              onClick={fetchSummary} 
-              disabled={loadingSummary}
-              className="mb-2"
-            >
-              {loadingSummary ? (
-                <>
-                  <Spinner
-                    as="span"
-                    animation="border"
-                    size="sm"
-                    role="status"
-                    aria-hidden="true"
-                    className="me-2"
-                  />
-                  Generating Summary...
-                </>
-              ) : (
-                "Get AI Summary"
-              )}
-            </Button>
-            
-            {summary && (
-              // In your RecordingPage component, update the SummaryCard usage:
-              <SummaryCard 
-                summary={summary} 
-                onTimestampClick={(seconds) => {
-                  const player = isAudioMode ? audioRef.current : videoRef.current;
-                  if (player) {
-                    player.currentTime = seconds;
-                    player.play();
-                    setIsPlaying(true);
-                  }
-                }}
-              />
-            )}
-          </div>
-        </Card.Body>
-      </Card>
-
-      {/* Comments Section */}
-      <Card className="card comments-section">
-        <Card.Body>
-          <h3 className="comments-title text-dark">Comments</h3>
-          {comments.length === 0 ? (
-            <p>No comments yet. Be the first to comment!</p>
-          ) : (
-            <div className="comments-list">
-              {comments.map((comment) => (
-                <div key={comment.id} className="comment">
-                  <div className="comment-header">
-                    <span className="comment-username">{comment.username}</span>
-                    <span className="comment-date">
-                      {new Date(comment.created_at).toLocaleString("en-US", {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                      })}
-                    </span>
+                  <div className="audio-player-container">
+                    <div className="audio-thumbnail-wrapper">
+                      <div
+                        className="audio-thumbnail-blur"
+                        style={{
+                          backgroundImage: `url(${API_URL}/episodes/thumbnail/${recordingData.thumbnail})`,
+                        }}
+                      ></div>
+                      <img
+                        src={`${API_URL}/episodes/thumbnail/${recordingData.thumbnail}`}
+                        alt={recordingData.name}
+                        className="audio-thumbnail-image"
+                      />
+                    </div>
+                    <audio
+                      controls
+                      className="w-100"
+                      ref={audioRef}
+                      onTimeUpdate={handleTimeUpdate}
+                      onPlay={() => setIsPlaying(true)}
+                      onPause={() => setIsPlaying(false)}
+                    >
+                      <source
+                        src={`${API_URL}/episodes/recording/video/${recordingData.video}`}
+                        type={isAudioOnly ? "audio/mp3" : "audio/mp4"}
+                      />
+                      Your browser does not support the audio element.
+                    </audio>
                   </div>
-                  <p className="comment-text">{comment.text}</p>
-                </div>
-              ))}
-            </div>
-          )}
-          <Form onSubmit={handleCommentSubmit} className="comment-form">
-            <Form.Group controlId="commentInput">
-              <Form.Label>Add a Comment</Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={3}
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Write your comment here..."
-                required
-              />
-            </Form.Group>
-            <Button variant="primary" type="submit" className="comment-submit">
-              Comment
-            </Button>
-          </Form>
-        </Card.Body>
-      </Card>
+                ) : (
+                  <video
+                    controls
+                    className="video"
+                    ref={videoRef}
+                    onTimeUpdate={handleTimeUpdate}
+                    onPlay={() => setIsPlaying(true)}
+                    onPause={() => setIsPlaying(false)}
+                  >
+                    <source
+                      src={`${API_URL}/episodes/recording/video/${recordingData.video}`}
+                      type="video/mp4"
+                    />
+                    Your browser does not support the video tag.
+                  </video>
+                )}
+              </div>
 
-      {/* <PodcastChatBox></PodcastChatBox> */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <h2 className="title">{recordingData.name}</h2>
+                {!isAudioOnly && (
+                  <Button
+                    variant="outline-primary"
+                    size="m"
+                    onClick={toggleMediaMode}
+                  >
+                    {isAudioMode ? (
+                      <SquarePlay size={20} />
+                    ) : (
+                      <AudioLines size={20} />
+                    )}
+                  </Button>
+                )}
+              </div>
+
+              <div className="creator-container">
+                <Image
+                  src={
+                    recordingData.creator.profile_picture
+                      ? `${API_URL}/users/profile-picture/${recordingData.creator.profile_picture}`
+                      : "https://via.placeholder.com/40"
+                  }
+                  alt={recordingData.creator.username}
+                  className="creator-avatar"
+                />
+                <span className="creator-name">
+                  {recordingData.creator.username}
+                </span>
+              </div>
+
+              <p className="date">
+                {new Date(recordingData.created_at).toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                })}
+                &nbsp;•&nbsp;{formatDuration(videoDuration)}
+              </p>
+
+              <p className="category">
+                <strong>
+                  {Array.isArray(recordingData.categories)
+                    ? recordingData.categories.join(", ")
+                    : recordingData.categories}
+                </strong>
+              </p>
+
+              <p className="description">{recordingData.show.description}</p>
+
+              {/* AI Summary Section */}
+              <div className="summary-section mt-3">
+                <Button
+                  variant="outline-secondary"
+                  onClick={fetchSummary}
+                  disabled={loadingSummary}
+                  className="mb-2"
+                >
+                  {loadingSummary ? (
+                    <>
+                      <Spinner
+                        as="span"
+                        animation="border"
+                        size="sm"
+                        role="status"
+                        aria-hidden="true"
+                        className="me-2"
+                      />
+                      Generating Summary...
+                    </>
+                  ) : (
+                    "Get AI Summary"
+                  )}
+                </Button>
+
+                {summary && (
+                  <SummaryCard
+                    summary={summary}
+                    onTimestampClick={(seconds) => {
+                      const player = isAudioMode ? audioRef.current : videoRef.current;
+                      if (player) {
+                        player.currentTime = seconds;
+                        player.play();
+                        setIsPlaying(true);
+                      }
+                    }}
+                  />
+                )}
+              </div>
+            </Card.Body>
+          </Card>
+
+        </div>
+
+        {/* Right Section: Chatbox, Comments */}
+        <div className="col-md-4">
+          <PodcastAIAssistant episodeId={recordingData.id}/>
+
+          {/* Comments Section */}
+          <Card className="card comments-section mt-3">
+            <Card.Body>
+              <h3 className="comments-title text-dark">Comments</h3>
+              {comments.length === 0 ? (
+                <p>No comments yet. Be the first to comment!</p>
+              ) : (
+                <div className="comments-list">
+                  {comments.map((comment) => (
+                    <div key={comment.id} className="comment">
+                      <div className="comment-header">
+                        <span className="comment-username">{comment.username}</span>
+                        <span className="comment-date">
+                          {new Date(comment.created_at).toLocaleString("en-US", {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          })}
+                        </span>
+                      </div>
+                      <p className="comment-text">{comment.text}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <Form onSubmit={handleCommentSubmit} className="comment-form">
+                <Form.Group controlId="commentInput">
+                  <Form.Label>Add a Comment</Form.Label>
+                  <Form.Control
+                    as="textarea"
+                    rows={3}
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="Write your comment here..."
+                    required
+                  />
+                </Form.Group>
+                <Button variant="primary" type="submit" className="comment-submit">
+                  Comment
+                </Button>
+              </Form>
+            </Card.Body>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 };
