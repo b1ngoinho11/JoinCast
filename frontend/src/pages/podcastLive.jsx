@@ -670,8 +670,7 @@ export default function PodcastLive() {
       const destination = audioContext.createMediaStreamDestination();
       remoteStreamsRef.current.forEach((remoteStream) => {
         if (remoteStream.getAudioTracks().length > 0) {
-          const remoteSource =
-            audioContext.createMediaStreamSource(remoteStream);
+          const remoteSource = audioContext.createMediaStreamSource(remoteStream);
           remoteSource.connect(destination);
           console.log("Added remote stream to recording");
         }
@@ -724,15 +723,6 @@ export default function PodcastLive() {
             })
           );
         }
-      };
-      mediaRecorderRef.current.onstop = () => {
-        const blob = new Blob(recordedChunks, { type: mimeType });
-        const url = URL.createObjectURL(blob);
-        console.log("Recording finished, blob URL:", url);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `recording-${new Date().toISOString()}.webm`;
-        a.click();
       };
       setIsRecording(true);
       const startTime = Date.now();
