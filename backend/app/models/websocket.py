@@ -24,47 +24,58 @@ class ConnectionManager:
         self.active_connections[client_id] = {
             "websocket": websocket,
             "is_host": is_host,
-            "is_speaker": is_host  # Host starts as speaker by default
+            "is_speaker": is_host
         }
         
         if room_id not in self.rooms:
             self.rooms[room_id] = set()
             self.speech_events[room_id] = []
             self.session_events[room_id] = []
-            self.live_sessions[room_id] = True  # Mark session as live when first created
+            self.live_sessions[room_id] = True
         
         self.rooms[room_id].add(client_id)
         
-        # Record join event using the new method
+        # Record join event
         timestamp = datetime.now().timestamp() * 1000
         join_event = self.record_session_event(room_id, "join", client_id, timestamp)
         
         # Notify everyone in the room about the new user
         await self.broadcast_to_room(
-        json.dumps({
-            "type": "user-joined",
-            "client_id": client_id,
-            "is_host": is_host,
-            "is_speaker": is_host,  # Host is speaker by default
-            "timestamp": join_event["timestamp"]
-        }),
-        room_id,
-        ""
+            json.dumps({
+                "type": "user-joined",
+                "client_id": client_id,
+                "is_host": is_host,
+                "is_speaker": is_host,
+                "timestamp": join_event["timestamp"]
+            }),
+            room_id,
+            ""
         )
         
-        # Send the current users list to the new connection
+        # Send the current users list to the new connection, including screen-sharing status
         users = [
-        {
-            "id": uid,
-            "is_host": self.active_connections[uid]["is_host"],
-            "is_speaker": self.active_connections[uid]["is_speaker"]
-        }
-        for uid in self.rooms[room_id]
+            {
+                "id": uid,
+                "is_host": self.active_connections[uid]["is_host"],
+                "is_speaker": self.active_connections[uid]["is_speaker"],
+                "is_screen_sharing": self.screen_sharers.get(room_id) == uid
+            }
+            for uid in self.rooms[room_id]
         ]
+        print(f"Sending users-list to {client_id}: {users}")
         await websocket.send_text(json.dumps({
             "type": "users-list",
             "users": users
         }))
+        
+        # Notify new user about ongoing screen sharing, if any
+        if room_id in self.screen_sharers:
+            screen_sharer_id = self.screen_sharers[room_id]
+            print(f"Notifying {client_id} of screen sharer: {screen_sharer_id}")
+            await websocket.send_text(json.dumps({
+                "type": "screen-share-started",
+                "sender": screen_sharer_id
+            }))
         
         if room_id not in self.chat_messages:
             self.chat_messages[room_id] = []
@@ -199,9 +210,12 @@ class ConnectionManager:
     
     def set_screen_sharer(self, room_id: str, user_id: str):
         self.screen_sharers[room_id] = user_id
-    
+        print(f"Screen sharer set for room {room_id}: {user_id}")
+
     def clear_screen_sharer(self, room_id: str):
-        self.screen_sharers.pop(room_id, None)
+        if room_id in self.screen_sharers:
+            print(f"Clearing screen sharer for room {room_id}: {self.screen_sharers[room_id]}")
+            self.screen_sharers.pop(room_id, None)
         
     def _save_chat_logs(self, room_id: str):
         """Save chat messages to a JSON file when a room is closed"""

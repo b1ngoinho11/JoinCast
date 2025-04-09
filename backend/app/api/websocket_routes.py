@@ -80,6 +80,11 @@ async def websocket_endpoint(
                         user_id
                     )
             
+            elif message['type'] == 'request-screen-share-offer':
+                print(f"User {user_id} requested screen-share offer from {message['recipient']}")
+                if message['recipient'] in manager.active_connections:
+                    await manager.active_connections[message['recipient']]['websocket'].send_text(data)
+            
             elif message['type'] == 'speech-event':
                 # Process speech detection events
                 is_speaking = message.get('speaking', False)
@@ -110,7 +115,8 @@ async def websocket_endpoint(
                     print(f"Error processing video chunk: {e}")
             
             elif message['type'] == 'start-screen-share':
-                mime_type = message.get('mimeType', 'video/webm')
+                print(f"User {user_id} started screen sharing in room {room_id}")
+                manager.set_screen_sharer(room_id, user_id)
                 await manager.broadcast_to_room(
                     json.dumps({
                         'type': 'screen-share-started',
@@ -121,6 +127,8 @@ async def websocket_endpoint(
                 )
             
             elif message['type'] == 'stop-screen-share':
+                print(f"User {user_id} stopped screen sharing in room {room_id}")
+                manager.clear_screen_sharer(room_id)
                 await manager.broadcast_to_room(
                     json.dumps({
                         'type': 'screen-share-stopped',
@@ -225,7 +233,19 @@ async def websocket_endpoint(
                 await manager.broadcast_to_room(data, room_id, user_id)
                 
     except WebSocketDisconnect:
+        print(f"User {user_id} disconnected from room {room_id}")
         manager.disconnect(user_id, room_id)
+        # Clear screen sharer if the disconnecting user was sharing
+        if manager.screen_sharers.get(room_id) == user_id:
+            manager.clear_screen_sharer(room_id)
+            await manager.broadcast_to_room(
+                json.dumps({
+                    "type": "screen-share-stopped",
+                    "sender": user_id
+                }),
+                room_id,
+                user_id
+            )
         await manager.broadcast_to_room(
             json.dumps({
                 "type": "disconnect",

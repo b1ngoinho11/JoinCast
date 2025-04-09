@@ -259,11 +259,59 @@ export default function PodcastLive() {
           await handleUsersList(message);
           break;
         case "screen-share-started":
+          console.log(`Screen share started by ${message.sender}`);
           handleScreenShareStarted(message);
           break;
         case "screen-share-stopped":
           handleScreenShareStopped(message);
           break;
+          case "request-screen-share-offer":
+            if (message.recipient === clientId && isSharing) {
+              console.log(`Received request-screen-share-offer from ${message.sender}`);
+              if (!screenStreamRef.current) {
+                console.error("No screen stream available to share");
+                return;
+              }
+              const screenSharePeerConnection = new RTCPeerConnection(configuration);
+              screenSharePeerConnectionsRef.current[message.sender] = screenSharePeerConnection;
+              console.log(`Adding tracks to peer connection for ${message.sender}`);
+              screenStreamRef.current.getTracks().forEach((track) => {
+                console.log(`Adding track: ${track.kind}, enabled: ${track.enabled}`);
+                screenSharePeerConnection.addTrack(track, screenStreamRef.current);
+              });
+              screenSharePeerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                  console.log(`Sending ICE candidate to ${message.sender}`);
+                  wsRef.current.send(
+                    JSON.stringify({
+                      type: "ice-candidate",
+                      candidate: event.candidate,
+                      sender: clientId,
+                      recipient: message.sender,
+                      streamType: "screen",
+                    })
+                  );
+                }
+              };
+              screenSharePeerConnection.onconnectionstatechange = () => {
+                console.log(
+                  `Screen share connection state for ${message.sender}: ${screenSharePeerConnection.connectionState}`
+                );
+              };
+              const offer = await screenSharePeerConnection.createOffer();
+              await screenSharePeerConnection.setLocalDescription(offer);
+              console.log(`Sending offer to ${message.sender}`);
+              wsRef.current.send(
+                JSON.stringify({
+                  type: "offer",
+                  offer: offer,
+                  sender: clientId,
+                  recipient: message.sender,
+                  streamType: "screen",
+                })
+              );
+            }
+            break;
         case "speaker-request":
           console.log("Speaker request received:", message);
           if (isHost) {
@@ -369,8 +417,25 @@ export default function PodcastLive() {
         participantsRef.current.set(message.sender, participant);
         setParticipants(Array.from(participantsRef.current.values()));
       }
-      showNotification(`${participant.name} started screen sharing`);
+      // Request an offer from the screen sharer
+      requestScreenShareOffer(message.sender);
     }
+  };
+
+  const requestScreenShareOffer = (screenSharerId) => {
+    if (!wsRef.current || !clientId) {
+      console.error("Cannot request screen-share offer: WebSocket or client ID missing");
+      return;
+    }
+    console.log(`Sending request-screen-share-offer to ${screenSharerId}`);
+    wsRef.current.send(
+      JSON.stringify({
+        type: "request-screen-share-offer",
+        sender: clientId,
+        recipient: screenSharerId,
+        timestamp: Date.now(),
+      })
+    );
   };
 
   const handleScreenShareStopped = (message) => {
@@ -392,6 +457,7 @@ export default function PodcastLive() {
   };
 
   const handleUsersList = async (message) => {
+    console.log("Received users-list:", message.users);
     for (const user of message.users) {
       if (user.id !== clientId) {
         await addParticipant(
@@ -400,9 +466,14 @@ export default function PodcastLive() {
           user.is_host || false,
           user.is_speaker || user.is_host || false
         );
+        const participant = participantsRef.current.get(user.id);
+        if (participant) {
+          participant.isScreenSharing = user.is_screen_sharing || false;
+          participantsRef.current.set(user.id, participant);
+        }
       }
     }
-    console.log("Users list updated:", message.users);
+    setParticipants(Array.from(participantsRef.current.values()));
   };
 
   const handleDisconnect = (message) => {
@@ -520,12 +591,15 @@ export default function PodcastLive() {
           .catch((err) => console.error("Error playing local stream:", err));
       }
       setIsSharing(true);
+      console.log("Sending start-screen-share message");
       wsRef.current.send(
         JSON.stringify({
-          type: "screen-share-started",
+          type: "start-screen-share",
           sender: clientId,
+          mimeType: "video/webm",
         })
       );
+
       const screenSharePeerConnection = new RTCPeerConnection(configuration);
       screenSharePeerConnectionsRef.current[clientId] =
         screenSharePeerConnection;
@@ -544,17 +618,25 @@ export default function PodcastLive() {
           );
         }
       };
-      const offer = await screenSharePeerConnection.createOffer();
-      await screenSharePeerConnection.setLocalDescription(offer);
-      wsRef.current.send(
-        JSON.stringify({
-          type: "offer",
-          offer: offer,
-          sender: clientId,
-          streamType: "screen",
-        })
-      );
-      screenStreamRef.current.getVideoTracks()[0].onended = stopScreenShare;
+      const sendOffer = async () => {
+        const offer = await screenSharePeerConnection.createOffer();
+        await screenSharePeerConnection.setLocalDescription(offer);
+        wsRef.current.send(
+          JSON.stringify({
+            type: "offer",
+            offer: offer,
+            sender: clientId,
+            streamType: "screen",
+          })
+        );
+      };
+      await sendOffer();
+      // Periodically send new offers to ensure late joiners receive one
+      const offerInterval = setInterval(sendOffer, 10000); // Every 10 seconds
+      screenStreamRef.current.getVideoTracks()[0].onended = () => {
+        clearInterval(offerInterval);
+        stopScreenShare();
+      };
     } catch (error) {
       console.error("Error sharing screen:", error);
       setIsSharing(false);
@@ -670,7 +752,8 @@ export default function PodcastLive() {
       const destination = audioContext.createMediaStreamDestination();
       remoteStreamsRef.current.forEach((remoteStream) => {
         if (remoteStream.getAudioTracks().length > 0) {
-          const remoteSource = audioContext.createMediaStreamSource(remoteStream);
+          const remoteSource =
+            audioContext.createMediaStreamSource(remoteStream);
           remoteSource.connect(destination);
           console.log("Added remote stream to recording");
         }
@@ -807,11 +890,14 @@ export default function PodcastLive() {
     peerConnection.ontrack = (event) => {
       const stream = event.streams[0];
       if (isScreenShare) {
+        console.log(`Received screen-share stream from ${message.sender}`);
         screenShareStreamsRef.current.set(message.sender, stream);
         if (screenShareVideoRef.current) {
+          console.log("Setting screen-share stream to video element");
           screenShareVideoRef.current.srcObject = stream;
           screenShareVideoRef.current
             .play()
+            .then(() => console.log("Screen-share video playing"))
             .catch((err) => console.error("Error playing remote stream:", err));
         }
         setParticipants((prev) =>
@@ -826,18 +912,10 @@ export default function PodcastLive() {
         audio.play().catch((err) => console.error("Error playing audio:", err));
       }
     };
-    peerConnection.onicecandidate = (event) => {
-      if (event.candidate) {
-        wsRef.current.send(
-          JSON.stringify({
-            type: "ice-candidate",
-            candidate: event.candidate,
-            sender: clientId,
-            recipient: message.sender,
-            streamType: isScreenShare ? "screen" : "audio",
-          })
-        );
-      }
+    peerConnection.onconnectionstatechange = () => {
+      console.log(
+        `Connection state with ${message.sender}: ${peerConnection.connectionState}`
+      );
     };
     await peerConnection.setRemoteDescription(
       new RTCSessionDescription(message.offer)
@@ -1051,13 +1129,20 @@ export default function PodcastLive() {
           <CardContent className="p-6 flex flex-col h-full">
             {(isSharing || participants.some((p) => p.isScreenSharing)) && (
               <div className="mb-6">
-                <div className="w-full bg-black rounded aspect-video flex items-center justify-center">
+                <div className="w-full bg-black rounded aspect-video flex items-center justify-center relative">
                   <video
                     ref={screenShareVideoRef}
                     autoPlay
                     playsInline
                     className="w-full h-full object-contain"
                   />
+                  {isSharing && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <span className="text-white text-xl bg-black bg-opacity-50 px-4 py-2 rounded">
+                        Now sharing screen
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
