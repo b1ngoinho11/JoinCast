@@ -62,6 +62,125 @@ def test_delete_user(db_session):
         deleted_user = user_repository.get(db_session, id=user.id)
         assert deleted_user is None, "User was not deleted"
 
+def test_get_user_by_username(db_session):
+    """Unit test: Test getting a user by username"""
+    username = "pytestuser"
+    email = "pytestuser@gmail.com"
+    
+    # Create a test user if it doesn't exist
+    existing_user = user_repository.get_by_email(db_session, email=email)
+    if not existing_user:
+        user_data = UserCreate(
+            email=email,
+            username=username,
+            password="password",
+            is_superuser=False
+        )
+        hashed_password = get_password_hash(user_data.password)
+        user_repository.create(
+            db=db_session,
+            obj_in=user_data,
+            hashed_password=hashed_password
+        )
+    
+    # Test function
+    user = user_repository.get_by_username(db_session, username=username)
+    assert user is not None, "Failed to get user by username"
+    assert user.username == username, "Username doesn't match"
+
+def test_update_user_integration(db_session):
+    """Integration test: Test updating a user's information"""
+    # Setup - create or get test user
+    email = "integration_test@example.com"
+    username = "integration_user"
+    
+    existing_user = user_repository.get_by_email(db_session, email=email)
+    if not existing_user:
+        user_data = UserCreate(
+            email=email,
+            username=username,
+            password="password",
+            is_superuser=False
+        )
+        hashed_password = get_password_hash(user_data.password)
+        user = user_repository.create(
+            db=db_session,
+            obj_in=user_data,
+            hashed_password=hashed_password
+        )
+    else:
+        user = existing_user
+    
+    # Test updating the user
+    new_username = "updated_user"
+    updated_user = user_repository.update(
+        db=db_session,
+        db_obj=user,
+        obj_in={"username": new_username}
+    )
+    
+    # Verify the update was successful
+    assert updated_user.username == new_username, "Username update failed"
+    
+    # Check that database has the updated record
+    refreshed_user = user_repository.get(db_session, id=user.id)
+    assert refreshed_user.username == new_username, "Username update not persisted"
+    
+    # Cleanup - restore original username
+    user_repository.update(
+        db=db_session,
+        db_obj=refreshed_user,
+        obj_in={"username": username}
+    )
+
+def test_user_system_flow(db_session):
+    """System test: Test the entire user lifecycle flow"""
+    # 1. Create a unique test user
+    test_email = f"system_test_{os.urandom(4).hex()}@example.com"
+    test_username = f"system_user_{os.urandom(4).hex()}"
+    test_password = "secure_password123"
+    
+    # Create user data
+    user_data = UserCreate(
+        email=test_email,
+        username=test_username,
+        password=test_password,
+        is_superuser=False
+    )
+    hashed_password = get_password_hash(user_data.password)
+    
+    # 2. Register the user
+    new_user = user_repository.create(
+        db=db_session,
+        obj_in=user_data,
+        hashed_password=hashed_password
+    )
+    assert new_user is not None, "User creation failed"
+    assert new_user.email == test_email, "Email mismatch"
+    assert new_user.username == test_username, "Username mismatch"
+    
+    # 3. Verify user can be found by email
+    found_user = user_repository.get_by_email(db_session, email=test_email)
+    assert found_user is not None, "User not found by email"
+    assert found_user.id == new_user.id, "User ID mismatch"
+    
+    # 4. Update user information
+    updated_username = f"updated_{test_username}"
+    updated_user = user_repository.update(
+        db=db_session,
+        db_obj=found_user,
+        obj_in={"username": updated_username}
+    )
+    assert updated_user.username == updated_username, "Username update failed"
+    
+    # 5. Delete the user
+    deleted_user = user_repository.delete(db_session, id=found_user.id)
+    assert deleted_user.id == found_user.id, "Wrong user deleted"
+    
+    # 6. Verify user is gone
+    gone_user = user_repository.get(db_session, id=found_user.id)
+    assert gone_user is None, "User was not properly deleted"
+
 def create_user(db):
     # Create a new database session
     # db = SessionLocal()
