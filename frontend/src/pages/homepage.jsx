@@ -99,9 +99,10 @@ const HomePage = () => {
       }
     });
 
+    // Reset animation state after transition duration
     setTimeout(() => {
       setIsAnimating(false);
-    }, 500);
+    }, 500); // Match CSS transition duration
   };
 
   useEffect(() => {
@@ -241,7 +242,7 @@ const HomePage = () => {
           throw new Error("Failed to fetch shows");
         }
         const data = await response.json();
-        
+
         // Randomly select one show
         if (data.length > 0) {
           const randomIndex = Math.floor(Math.random() * data.length);
@@ -288,7 +289,7 @@ const HomePage = () => {
     return { prevIndex, currentIndex: currentBannerIndex, nextIndex };
   };
 
-  console.log(randomShow)
+  console.log(randomShow);
 
   return (
     <div>
@@ -297,135 +298,72 @@ const HomePage = () => {
         {bannerPodcasts.length > 0 && (
           <div className="banner-container">
             <div className="banner-wrapper">
-              {(() => {
+              {bannerPodcasts.map((podcast, index) => {
                 const { prevIndex, currentIndex, nextIndex } =
                   getBannerIndices();
+                let bannerClass = "";
+                if (index === currentIndex) {
+                  bannerClass = "banner-middle";
+                } else if (index === prevIndex) {
+                  bannerClass = "banner-left";
+                } else if (index === nextIndex) {
+                  bannerClass = "banner-right";
+                } else {
+                  // Hide other items to prevent overlap
+                  bannerClass = "banner-hidden";
+                }
+
                 return (
-                  <>
-                    <div
-                      className={`banner-item banner-left ${
-                        isAnimating ? "banner-slide" : ""
-                      }`}
-                      style={{
-                        backgroundImage: `url(${bannerPodcasts[prevIndex].imageUrl})`,
-                      }}
-                    >
-                      <div className="banner-overlay">
-                        <div className="banner-content">
-                          <Row className="justify-content-center align-items-center h-100">
-                            <Col
-                              xs={12}
-                              md={8}
-                              lg={6}
-                              className="d-flex align-items-center"
-                            >
-                              <div className="banner-thumbnail-container">
-                                <img
-                                  src={bannerPodcasts[prevIndex].imageUrl}
-                                  alt={bannerPodcasts[prevIndex].title}
-                                  className="banner-thumbnail"
-                                />
-                              </div>
-                              <div className="banner-text">
-                                <h1 className="banner-title">
-                                  {bannerPodcasts[prevIndex].title}
-                                </h1>
-                                <p className="banner-creator">
-                                  {bannerPodcasts[prevIndex].creator.name}
-                                </p>
-                              </div>
-                            </Col>
-                          </Row>
-                        </div>
+                  <Link
+                    key={podcast.id}
+                    to={`/${
+                      podcast.type === "live" ? "podcast/" : "recording/"
+                    }${podcast.id}`}
+                    className={`banner-item ${bannerClass} ${
+                      isAnimating ? "banner-slide" : ""
+                    }`}
+                    style={{
+                      backgroundImage: `url(${podcast.imageUrl})`,
+                      // Ensure non-visible items are hidden
+                      display:
+                        bannerClass === "banner-hidden" ? "none" : "block",
+                    }}
+                  >
+                    <div className="banner-overlay">
+                      <div className="banner-content">
+                        <Row className="justify-content-center align-items-center h-100">
+                          <Col
+                            xs={12}
+                            md={8}
+                            lg={6}
+                            className="d-flex align-items-center"
+                          >
+                            <div className="banner-thumbnail-container">
+                              <img
+                                src={podcast.imageUrl}
+                                alt={podcast.title}
+                                className="banner-thumbnail"
+                              />
+                            </div>
+                            <div className="banner-text">
+                              <h1 className="banner-title">{podcast.title}</h1>
+                              <p className="banner-creator">
+                                {podcast.creator.name}
+                              </p>
+                            </div>
+                          </Col>
+                        </Row>
                       </div>
                     </div>
-                    <Link
-                      to={`/${
-                        bannerPodcasts[currentIndex].type === "live"
-                          ? "podcast/"
-                          : "recording/"
-                      }${bannerPodcasts[currentIndex].id}`}
-                      className={`banner-item banner-middle ${
-                        isAnimating ? "banner-slide" : ""
-                      }`}
-                      style={{
-                        backgroundImage: `url(${bannerPodcasts[currentIndex].imageUrl})`,
-                      }}
-                    >
-                      <div className="banner-overlay">
-                        <div className="banner-content">
-                          <Row className="justify-content-center align-items-center h-100">
-                            <Col
-                              xs={12}
-                              md={8}
-                              lg={6}
-                              className="d-flex align-items-center"
-                            >
-                              <div className="banner-thumbnail-container">
-                                <img
-                                  src={bannerPodcasts[currentIndex].imageUrl}
-                                  alt={bannerPodcasts[currentIndex].title}
-                                  className="banner-thumbnail"
-                                />
-                              </div>
-                              <div className="banner-text">
-                                <h1 className="banner-title">
-                                  {bannerPodcasts[currentIndex].title}
-                                </h1>
-                                <p className="banner-creator">
-                                  {bannerPodcasts[currentIndex].creator.name}
-                                </p>
-                              </div>
-                            </Col>
-                          </Row>
-                        </div>
-                      </div>
-                    </Link>
-                    <div
-                      className={`banner-item banner-right ${
-                        isAnimating ? "banner-slide" : ""
-                      }`}
-                      style={{
-                        backgroundImage: `url(${bannerPodcasts[nextIndex].imageUrl})`,
-                      }}
-                    >
-                      <div className="banner-overlay">
-                        <div className="banner-content">
-                          <Row className="justify-content-center align-items-center h-100">
-                            <Col
-                              xs={12}
-                              md={8}
-                              lg={6}
-                              className="d-flex align-items-center"
-                            >
-                              <div className="banner-thumbnail-container">
-                                <img
-                                  src={bannerPodcasts[nextIndex].imageUrl}
-                                  alt={bannerPodcasts[nextIndex].title}
-                                  className="banner-thumbnail"
-                                />
-                              </div>
-                              <div className="banner-text">
-                                <h1 className="banner-title">
-                                  {bannerPodcasts[nextIndex].title}
-                                </h1>
-                                <p className="banner-creator">
-                                  {bannerPodcasts[nextIndex].creator.name}
-                                </p>
-                              </div>
-                            </Col>
-                          </Row>
-                        </div>
-                      </div>
-                    </div>
-                  </>
+                  </Link>
                 );
-              })()}
+              })}
             </div>
             <Button
               variant="dark"
               className="banner-nav-button banner-nav-left"
               onClick={() => handleBannerNavigation("left")}
+              aria-label="Previous banner"
             >
               <IoIosArrowBack
                 style={{ background: "transparent", color: "white" }}
@@ -435,6 +373,7 @@ const HomePage = () => {
               variant="dark"
               className="banner-nav-button banner-nav-right"
               onClick={() => handleBannerNavigation("right")}
+              aria-label="Next banner"
             >
               <IoIosArrowForward
                 style={{ background: "transparent", color: "white" }}

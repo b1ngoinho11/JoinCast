@@ -98,6 +98,10 @@
   overflow: hidden;
 }
 
+.banner-hidden {
+  display: none;
+}
+
 .banner-wrapper {
   position: relative;
   width: 100%;
@@ -114,8 +118,13 @@
   background-size: cover;
   background-position: center;
   border-radius: 10px;
-  transition: transform 0.5s ease, z-index 0s, opacity 0.5s ease;
+  /* Remove z-index from transition to make it instant */
+  transition: transform 0.5s ease, opacity 0.5s ease;
   overflow: hidden;
+}
+
+.banner-item.banner-slide {
+  transition: transform 0.5s ease, opacity 0.5s ease;
 }
 
 .banner-item::before {
@@ -138,22 +147,22 @@
 
 .banner-middle {
   transform: translateX(0) scale(1);
-  z-index: 3;
+  z-index: 3; /* Highest z-index to stay on top */
   opacity: 1;
-}
-
-.banner-middle:hover {
-  transform: scale(1.02);
-}
-
-.banner-middle:active {
-  transform: scale(0.98);
 }
 
 .banner-right {
   transform: translateX(60%) scale(0.8);
   z-index: 1;
   opacity: 0.7;
+}
+
+.banner-middle:hover {
+  transform: translateX(0) scale(1.02);
+}
+
+.banner-middle:active {
+  transform: translateX(0) scale(0.98);
 }
 
 .banner-slide {
