@@ -31,6 +31,7 @@ class EpisodeResponse(EpisodeBase):
     updated_at: Optional[datetime] = None
     show: Optional[ShowMinimalResponse] = None
     creator: Optional[UserMinimalResponse] = None
+    transcript: Optional[str] = None
     
     model_config = ConfigDict(from_attributes=True)
 

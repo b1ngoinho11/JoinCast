@@ -10,13 +10,22 @@ def extract_audio_from_video(video_path, audio_output_path):
     video.audio.write_audiofile(audio_output_path)
     return audio_output_path
 
-def transcribe_media(media_path, output_txt=None):
+def delete_audio_file(audio_path):
+    """Delete the audio file after processing"""
+    if os.path.exists(audio_path):
+        os.remove(audio_path)
+    else:
+        print(f"The file {audio_path} does not exist and cannot be deleted.")
+    return True
+
+def transcribe_media(media_path):
     """Transcribe audio or video file and optionally save to text file"""
-    start_time = time.time()
+    # start_time = time.time()
     
-    # Check if the file is a video
+    # Check if the file is a video or already an MP3
     _, ext = os.path.splitext(media_path)
     is_video = ext.lower() in ['.mp4', '.avi', '.mov', '.mkv']
+    is_mp3 = ext.lower() in ['.mp3', '.m4a', '.wav', '.flac']
     
     # If it's a video, extract audio first
     if is_video:
@@ -26,6 +35,12 @@ def transcribe_media(media_path, output_txt=None):
         video = VideoFileClip(media_path)
         duration = video.duration
         video.close()
+    elif is_mp3:
+        audio_path = media_path
+        # Get audio duration
+        audio = VideoFileClip(audio_path)
+        duration = audio.duration
+        audio.close()
     else:
         audio_path = media_path
         # Get audio duration
@@ -38,27 +53,17 @@ def transcribe_media(media_path, output_txt=None):
     result = model.transcribe(audio_path)
     
     end_time = time.time()
-    processing_time = end_time - start_time
+    # processing_time = end_time - start_time
+    
+    return_text = ""
     
     # Save transcript to file if requested
-    if output_txt:
-        with open(output_txt, 'w') as f:
-            for segment in result['segments']:
-                start = time.strftime('%H:%M:%S', time.gmtime(segment['start']))
-                end = time.strftime('%H:%M:%S', time.gmtime(segment['end']))
-                f.write(f"[{start} --> {end}] {segment['text']}\n")
-
+    for segment in result['segments']:
+        start = time.strftime('%H:%M:%S', time.gmtime(segment['start']))
+        end = time.strftime('%H:%M:%S', time.gmtime(segment['end']))
+        return_text += f"[{start} --> {end}] {segment['text']}\n"
+        
+    # Clean up audio file if it was created
+    delete_audio_file(audio_path)
     
-    # Calculate and print performance metrics
-    print(f"Media duration: {duration:.2f} seconds")
-    print(f"Processing time: {processing_time:.2f} seconds")
-    print(f"Processing ratio: {processing_time/duration:.2f}x real-time")
-    
-    return result["text"]
-
-if __name__ == "__main__":
-    media_file = "48826adc-9ec6-475b-8f4d-12f10d5aa703.mov"
-    
-    output_file = f"{os.path.splitext(media_file)[0]}_transcript.txt"
-    transcript = transcribe_media(media_file, output_file)
-    print(transcript)
+    return return_text.strip()  # Ensure no trailing newlines

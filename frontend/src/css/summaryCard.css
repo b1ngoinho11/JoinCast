@@ -1,0 +1,48 @@
+.typing-indicator {
+  color: #6c757d;
+  font-size: 0.8rem;
+  animation: pulse 1.5s infinite;
+}
+
+.summary-content.typing {
+  position: relative;
+}
+
+.cursor {
+  display: inline-block;
+  width: 0.5rem;
+  height: 1.2rem;
+  background-color: #212529;
+  animation: cursor-blink 0.8s infinite;
+  position: relative;
+  top: 0.2rem;
+  margin-left: 2px;
+}
+
+.toggle-button {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: all 0.2s ease-in-out;
+}
+
+.toggle-button:hover {
+  background-color: #e9ecef;
+}
+
+.summary-card {
+  transition: all 0.3s ease-in-out;
+}
+
+.summary-body {
+  transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
+}
+
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}

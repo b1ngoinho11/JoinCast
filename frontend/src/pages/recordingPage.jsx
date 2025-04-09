@@ -4,6 +4,11 @@ import { useParams } from "react-router-dom";
 import axios from "axios";
 import { Spinner, Alert, Card, Form, Button, Image } from "react-bootstrap";
 import "../css/recordingPage.css";
+// import PodcastChatBox from "../components/PodcastChatBox";
+// import DynamicPodcastSummary from './DynamicPodcastSummary';
+// import SimplePodcastSummary from '../components/DynamicPodcastSummary';
+// import AIGeneratedSummary from "../components/AIGeneratedSummary";
+import SummaryCard from "../components/summaryCard";
 
 const RecordingPage = () => {
   const { id } = useParams();
@@ -19,6 +24,8 @@ const RecordingPage = () => {
   const audioRef = useRef(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  let [summary, setSummary] = useState("");
+  const [loadingSummary, setLoadingSummary] = useState(false);
 
   const API_URL = "http://localhost:8000/api/v1";
 
@@ -170,6 +177,23 @@ const RecordingPage = () => {
     return `${Math.max(1, minutes)}mins`;
   };
 
+  // Fetch AI summary for the episode
+  const fetchSummary = async () => {
+    setLoadingSummary(true);
+    try {
+      const response = await axios.get(`${API_URL}/episodes/summaries/${id}`);
+      console.log(response.data);
+      setSummary(response.data || "No summary available for this episode.");
+    } catch (err) {
+      console.error("Error fetching summary:", err);
+      setSummary("Failed to fetch summary. Please try again later.");
+    } finally {
+      setLoadingSummary(false);
+    }
+  };
+
+  // summary = "### **Summary of the Video/Podcast Episode:** **Main Topic (Timestamp: 00:00:00 – 00:01:25)** – A high-performance drag race featuring four modified supercars (Porsche 911 GT3, Ferrari 812 Superfast, Lamborghini Aventador SV, and Lamborghini Revuelto) fitted with **Gintani exhausts**, making them extremely loud. The event takes place at a special noise-unrestricted location for standing quarter-mile races. - **Cars & Specs:** - **Lamborghini Aventador SV** (6.5L V12, 750 HP, AWD) - **Lamborghini Revuelto** (6.5L V12 + hybrid, 1,015 HP, AWD) - **Ferrari 812 Superfast** (6.5L V12, 800 HP, RWD) - **Porsche 911 GT3** (4.0L Flat-6, 510 HP, RWD) - **Key Details:** - All cars feature **performance exhaust upgrades** and **launch control**. - Commentary by **Matt Watson**, presenter of **Carwow**. - The drag race will determine the fastest car in a **quarter-mile sprint**. *(The transcript cuts off before the actual race begins.)*"
+
   if (loading) {
     return (
       <div className="text-center spinner">
@@ -242,7 +266,6 @@ const RecordingPage = () => {
             )}
           </div>
 
-          {/* Rest of the component remains the same */}
           <div
             style={{
               display: "flex",
@@ -299,6 +322,36 @@ const RecordingPage = () => {
           </p>
 
           <p className="description">{recordingData.show.description}</p>
+          
+          {/* AI Summary Section */}
+          <div className="summary-section mt-3">
+            <Button 
+              variant="outline-secondary" 
+              onClick={fetchSummary} 
+              disabled={loadingSummary}
+              className="mb-2"
+            >
+              {loadingSummary ? (
+                <>
+                  <Spinner
+                    as="span"
+                    animation="border"
+                    size="sm"
+                    role="status"
+                    aria-hidden="true"
+                    className="me-2"
+                  />
+                  Generating Summary...
+                </>
+              ) : (
+                "Get AI Summary"
+              )}
+            </Button>
+            
+            {summary && (
+              <SummaryCard summary={summary} />
+            )}
+          </div>
         </Card.Body>
       </Card>
 
@@ -344,8 +397,13 @@ const RecordingPage = () => {
           </Form>
         </Card.Body>
       </Card>
+
+      {/* <PodcastChatBox></PodcastChatBox> */}
     </div>
   );
 };
 
 export default RecordingPage;
+
+
+
