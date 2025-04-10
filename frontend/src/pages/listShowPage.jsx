@@ -117,7 +117,7 @@ const ListShowPage = () => {
 
       <h2 className="my-4">Shows</h2>
       {filteredShows.length === 0 ? (
-        <div variant="light" className="text-center">
+        <div className="text-center">
           No shows found matching your search.
         </div>
       ) : (
