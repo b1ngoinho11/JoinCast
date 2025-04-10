@@ -7,7 +7,7 @@ import ffmpeg
 
 from app.api.dependencies import get_db
 from app.repositories.episode_repository import episode_repository
-from app.utils.episode_file_handler import LIVES_DIR, LIVES_LOG_DIR, SESSIONS_LOG_DIR, LIVE_COMMENTS_LOG_DIR
+from app.utils.episode_file_handler import LIVES_DIR, LIVES_LOG_DIR, SESSIONS_LOG_DIR, LIVE_COMMENTS_LOG_DIR, transcribe_temp_recording
 
 router = APIRouter(prefix="/api/v1/replay", tags=["replay"])
 
@@ -136,3 +136,28 @@ async def get_live_comments_log(episode_id: str, db: Session = Depends(get_db)):
         os.path.join(LIVE_COMMENTS_LOG_DIR, log_file),
         media_type="application/json"
     )
+    
+@router.get("/{episode_id}/transcribe")
+async def transcribe_live_recording(episode_id: str, db: Session = Depends(get_db)):
+    """
+    Transcribe the latest temporary or final recording for a live episode.
+    Returns the transcription and summary as plain text.
+    """
+    episode = episode_repository.get(db, id=episode_id)
+    if not episode or episode.type != "live":
+        raise HTTPException(status_code=404, detail="Live episode not found")
+
+    # Look for temporary recording first, then fall back to final recording
+    temp_file = f"{LIVES_DIR}/summary_temp_{episode_id}.mp4"
+    final_file = f"{LIVES_DIR}/{episode_id}.mp4"
+    file_path = temp_file if os.path.exists(temp_file) else final_file
+
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="No recording file found for transcription")
+
+    try:
+        # Call transcribe_temp_recording from episode_file_handler
+        result = transcribe_temp_recording(file_path)
+        return {"transcription": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")

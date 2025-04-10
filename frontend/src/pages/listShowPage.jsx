@@ -140,7 +140,7 @@ const ListShowPage = () => {
                   width: '100%',
                 }}
               >
-                <div className="flex-grow-1">
+                <div className="flex-grow-1 w-2/3">
                   <h5 style={{ color: "black" }}>{show.name}</h5>
                   <p>
                     {show.description.length > 100

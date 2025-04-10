@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"; // Added CardHeader, CardTitle
 import {
   Mic,
   MicOff,
@@ -32,7 +32,9 @@ export default function PodcastLive() {
   const [isHost, setIsHost] = useState(null);
   const [participants, setParticipants] = useState([]);
   const [clientId, setClientId] = useState(null);
-  const [userCache, setUserCache] = useState(new Map()); // Cache for user data
+  const [userCache, setUserCache] = useState(new Map());
+  const [transcriptionData, setTranscriptionData] = useState(null); // New state for transcription/summary
+  const [isTranscribing, setIsTranscribing] = useState(false); // New loading state
 
   const wsRef = useRef(null);
   const localStreamRef = useRef(null);
@@ -41,6 +43,7 @@ export default function PodcastLive() {
   const timerIntervalRef = useRef(null);
   const screenShareVideoRef = useRef(null);
   const speechDetectionIntervalRef = useRef(null);
+  const chatContainerRef = useRef(null);
 
   const peerConnectionsRef = useRef({});
   const screenSharePeerConnectionsRef = useRef({});
@@ -49,8 +52,8 @@ export default function PodcastLive() {
   const screenShareStreamsRef = useRef(new Map());
 
   const [chatMessages, setChatMessages] = useState([]);
+
   const [chatInput, setChatInput] = useState("");
-  const chatContainerRef = useRef(null);
 
   const navigate = useNavigate();
 
@@ -76,7 +79,7 @@ export default function PodcastLive() {
       return userData;
     } catch (error) {
       console.error(`Error fetching user data for ${userId}:`, error);
-      return { id: userId, username: userId }; // Fallback to ID if fetch fails
+      return { id: userId, username: userId };
     }
   };
 
@@ -114,7 +117,7 @@ export default function PodcastLive() {
     isSpeaker = false
   ) => {
     const userData = await fetchUserDataById(id);
-    const name = userData.username || id; // Use username, fallback to ID
+    const name = userData.username || id;
     const existingParticipant = participantsRef.current.get(id);
     if (existingParticipant) {
       existingParticipant.name = name;
@@ -253,6 +256,7 @@ export default function PodcastLive() {
           break;
         case "temp-recording-error":
           showNotification(`Error: ${message.message}`);
+          setIsTranscribing(false); // Stop loading on error
           break;
         case "user-joined":
           await handleUserJoined(message);
@@ -341,7 +345,7 @@ export default function PodcastLive() {
         case "revoke-speaker":
           if (message.recipient === clientId) {
             setIsSpeaker(false);
-            setSpeakerRequestStatus(null); // Reset the request status
+            setSpeakerRequestStatus(null);
             if (localStreamRef.current) {
               localStreamRef.current.getAudioTracks().forEach((track) => {
                 track.enabled = false;
@@ -402,6 +406,24 @@ export default function PodcastLive() {
             },
           ]);
           break;
+        case "temp-recording-transcribed":
+          showNotification("Transcription and summary received!");
+          console.log("Full response:", message.transcription);
+          const [transcriptionPart, summaryPart] =
+            message.transcription.split("=== Summary ===");
+          const transcriptionText = transcriptionPart
+            .replace("=== Transcription ===", "")
+            .trim();
+          const summaryText = summaryPart
+            ? summaryPart.trim()
+            : "No summary generated";
+          setTranscriptionData({
+            transcription: transcriptionText,
+            summary: summaryText,
+            timestamp: Date.now(),
+          });
+          setIsTranscribing(false); // Stop loading
+          break;
         case "live-ended":
           showNotification("Live session ended by host");
           stopCall();
@@ -434,7 +456,6 @@ export default function PodcastLive() {
         participantsRef.current.set(message.sender, participant);
         setParticipants(Array.from(participantsRef.current.values()));
       }
-      // Request an offer from the screen sharer
       requestScreenShareOffer(message.sender);
     }
   };
@@ -650,8 +671,7 @@ export default function PodcastLive() {
         );
       };
       await sendOffer();
-      // Periodically send new offers to ensure late joiners receive one
-      const offerInterval = setInterval(sendOffer, 10000); // Every 10 seconds
+      const offerInterval = setInterval(sendOffer, 10000);
       screenStreamRef.current.getVideoTracks()[0].onended = () => {
         clearInterval(offerInterval);
         stopScreenShare();
@@ -734,7 +754,6 @@ export default function PodcastLive() {
         timestamp: timestamp,
       })
     );
-    // Reset request status if it's the current user being declined
     if (requesterId === clientId) {
       setSpeakerRequestStatus("declined");
     }
@@ -752,7 +771,6 @@ export default function PodcastLive() {
         timestamp: timestamp,
       })
     );
-    // Reset request status if it's the current user being demoted
     if (speakerId === clientId) {
       setSpeakerRequestStatus(null);
     }
@@ -860,12 +878,8 @@ export default function PodcastLive() {
   };
 
   const createTempRecording = () => {
-    if (!wsRef.current || !isRecording) {
-      console.error(
-        "Cannot create temp recording: WebSocket not connected or not recording"
-      );
-      return;
-    }
+    if (!wsRef.current || !clientId) return;
+    setIsTranscribing(true); // Start loading
     wsRef.current.send(
       JSON.stringify({
         type: "create-temp-recording",
@@ -1043,7 +1057,7 @@ export default function PodcastLive() {
     const userData = await fetchUserDataById(clientId);
     const message = {
       type: "chat-message",
-      sender: userData.username, // Send username instead of ID
+      sender: userData.username,
       content: chatInput.trim(),
       timestamp: Date.now(),
     };
@@ -1054,7 +1068,6 @@ export default function PodcastLive() {
   const endLive = async () => {
     try {
       if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        // Send end live message through websocket
         wsRef.current.send(
           JSON.stringify({
             type: "end-live",
@@ -1062,16 +1075,10 @@ export default function PodcastLive() {
           })
         );
       }
-
-      // Update episode status through REST API
       await api.put(
         `/api/v1/episodes/live/end_live/${id}?creator_id=${clientId}`
       );
-
-      // Stop all media and connections
       stopCall();
-
-      // Redirect to homepage
       navigate("/");
     } catch (error) {
       console.error("Error ending live session:", error);
@@ -1157,226 +1164,223 @@ export default function PodcastLive() {
           )}
         </div>
       </div>
-      <div
-        className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-3 gap-6"
-        style={{ height: "calc(100vh - 220px)" }}
-      >
-        <Card className="md:col-span-2">
-          <CardContent className="p-6 flex flex-col h-full">
-            {(isSharing || participants.some((p) => p.isScreenSharing)) && (
-              <div className="mb-6">
-                <div className="w-full bg-black rounded aspect-video flex items-center justify-center relative">
-                  <video
-                    ref={screenShareVideoRef}
-                    autoPlay
-                    playsInline
-                    className="w-full h-full object-contain"
-                  />
-                  {isSharing && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <span className="text-white text-xl bg-black bg-opacity-50 px-4 py-2 rounded">
-                        Now sharing screen
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-            <div className="flex-1 overflow-y-auto">
-              <div className="mb-6">
-                <h3 className="font-semibold flex items-center gap-2 mb-4 text-lg">
-                  <Mic className="w-5 h-5" />
-                  Speakers (
-                  {participants.filter((p) => p.isSpeaker || p.isHost).length})
-                </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-                  {participants
-                    .filter((p) => p.isSpeaker || p.isHost)
-                    .map((participant) => (
-                      <div
-                        key={participant.id}
-                        className="flex flex-col items-center gap-0"
-                      >
-                        <div className="relative">
-                          <div
-                            className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-xl font-medium bg-gray-500`}
-                          >
-                            <img
-                              src={`http://127.0.0.1:8000/api/v1/users/profile-picture/${participant.profilePicture}`}
-                              alt={participant.name}
-                              className="w-full h-full rounded-full object-cover"
-                              onError={(e) =>
-                                (e.target.src = "/default-avatar.png")
-                              }
-                            />
-                          </div>
-                          {participant.isSpeaking && (
-                            <div className="absolute inset-0 rounded-full border-3 border-green-500 animate-pulse" />
-                          )}
-                        </div>
-                        <div className="text-center">
-                          <div className="text-sm font-medium">
-                            {participant.name}
-                            {participant.id === clientId && " (You)"}
-                          </div>
-                          <div className="text-xs text-gray-500 flex flex-col items-center gap-1 mt-1">
-                            {participant.isHost && (
-                              <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">
-                                Host
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        {isHost && !participant.isHost && (
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="rounded-full w-5 h-5 flex items-center justify-center text-red-500 hover:text-red-700"
-                            onClick={() => demoteSpeaker(participant.id)}
-                          >
-                            <ArrowDown className="h-4 w-4" />
-                          </Button>
-                        )}
+      <div className="w-full max-w-6xl flex flex-col gap-6">
+        {/* Main Grid for Participants and Chat */}
+        <div
+          className="grid grid-cols-1 md:grid-cols-3 gap-6"
+          style={{ height: "calc(100vh - 300px)" }} // Adjusted height to accommodate new box
+        >
+          <Card className="md:col-span-2">
+            <CardContent className="p-6 flex flex-col h-full">
+              {(isSharing || participants.some((p) => p.isScreenSharing)) && (
+                <div className="mb-6">
+                  <div className="w-full bg-black rounded aspect-video flex items-center justify-center relative">
+                    <video
+                      ref={screenShareVideoRef}
+                      autoPlay
+                      playsInline
+                      className="w-full h-full object-contain"
+                    />
+                    {isSharing && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <span className="text-white text-xl bg-black bg-opacity-50 px-4 py-2 rounded">
+                          Now sharing screen
+                        </span>
                       </div>
-                    ))}
-                </div>
-              </div>
-              <div>
-                <h3 className="font-semibold flex items-center gap-2 mb-4 text-lg">
-                  <UserPlus className="w-5 h-5" />
-                  Listeners (
-                  {participants.filter((p) => !p.isSpeaker && !p.isHost).length}
-                  )
-                </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-                  {participants
-                    .filter((p) => !p.isSpeaker && !p.isHost)
-                    .map((participant) => (
-                      <div
-                        key={participant.id}
-                        className="flex flex-col items-center gap-0"
-                      >
-                        <div className="relative">
-                          <div
-                            className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-xl font-medium bg-gray-500`}
-                          >
-                            <img
-                              src={`http://127.0.0.1:8000/api/v1/users/profile-picture/${participant.profilePicture}`}
-                              alt={participant.name}
-                              className="w-full h-full rounded-full object-cover"
-                              onError={(e) =>
-                                (e.target.src = "/default-avatar.png")
-                              }
-                            />
-                          </div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-sm font-medium">
-                            {participant.name}
-                            {participant.id === clientId && " (You)"}
-                          </div>
-                        </div>
-                        {isHost &&
-                          !participant.isHost &&
-                          pendingRequests.some(
-                            (req) => req.id === participant.id
-                          ) && (
-                            <div className="flex gap-1">
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="rounded-full w-5 h-5 flex items-center justify-center text-green-500 hover:text-green-700"
-                                onClick={() => approveRequest(participant.id)}
-                              >
-                                <Check className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="rounded-full w-5 h-5 flex items-center justify-center text-red-500 hover:text-red-700"
-                                onClick={() => declineRequest(participant.id)}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          )}
-                      </div>
-                    ))}
-                </div>
-              </div>
-            </div>
-            <div className="mt-6 flex justify-center gap-4 flex-wrap">
-              {!isHost && (
-                <div className="flex flex-col items-center space-y-2">
-                  <Button
-                    variant="outline"
-                    onClick={requestToSpeak}
-                    disabled={speakerRequestStatus !== null || !isCallActive}
-                    className={`rounded-full w-12 h-12 flex items-center justify-center p-0 ${
-                      speakerRequestStatus === "pending"
-                        ? "text-yellow-500"
-                        : speakerRequestStatus === "approved"
-                        ? "text-green-500"
-                        : "text-gray-500"
-                    }`}
-                  >
-                    <Hand className="h-6 w-6" />
-                  </Button>
-                  {speakerRequestStatus && (
-                    <div
-                      className={`flex items-center text-sm ${
-                        speakerRequestStatus === "pending"
-                          ? "text-yellow-600"
-                          : speakerRequestStatus === "approved"
-                          ? "text-green-600"
-                          : "text-red-600"
-                      }`}
-                    >
-                      {speakerRequestStatus === "pending" && "Request sent"}
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               )}
-              {(isHost || isSpeaker) && (
-                <>
-                  <Button
-                    variant="outline"
-                    onClick={toggleMute}
-                    disabled={!isCallActive}
-                    className={`rounded-full w-12 h-12 flex items-center justify-center p-0 ${
-                      isMuted ? "text-red-500" : "text-green-500"
-                    }`}
-                  >
-                    {isMuted ? (
-                      <MicOff className="h-6 w-6" />
-                    ) : (
-                      <Mic className="h-6 w-6" />
+              <div className="flex-1 overflow-y-auto">
+                <div className="mb-6">
+                  <h3 className="font-semibold flex items-center gap-2 mb-4 text-lg">
+                    <Mic className="w-5 h-5" />
+                    Speakers (
+                    {participants.filter((p) => p.isSpeaker || p.isHost).length}
+                    )
+                  </h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+                    {participants
+                      .filter((p) => p.isSpeaker || p.isHost)
+                      .map((participant) => (
+                        <div
+                          key={participant.id}
+                          className="flex flex-col items-center gap-0"
+                        >
+                          <div className="relative">
+                            <div
+                              className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-xl font-medium bg-gray-500`}
+                            >
+                              <img
+                                src={`http://127.0.0.1:8000/api/v1/users/profile-picture/${participant.profilePicture}`}
+                                alt={participant.name}
+                                className="w-full h-full rounded-full object-cover"
+                                onError={(e) =>
+                                  (e.target.src = "/default-avatar.png")
+                                }
+                              />
+                            </div>
+                            {participant.isSpeaking && (
+                              <div className="absolute inset-0 rounded-full border-3 border-green-500 animate-pulse" />
+                            )}
+                          </div>
+                          <div className="text-center">
+                            <div className="text-sm font-medium">
+                              {participant.name}
+                              {participant.id === clientId && " (You)"}
+                            </div>
+                            <div className="text-xs text-gray-500 flex flex-col items-center gap-1 mt-1">
+                              {participant.isHost && (
+                                <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">
+                                  Host
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          {isHost && !participant.isHost && (
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="rounded-full w-5 h-5 flex items-center justify-center text-red-500 hover:text-red-700"
+                              onClick={() => demoteSpeaker(participant.id)}
+                            >
+                              <ArrowDown className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+                <div>
+                  <h3 className="font-semibold flex items-center gap-2 mb-4 text-lg">
+                    <UserPlus className="w-5 h-5" />
+                    Listeners (
+                    {
+                      participants.filter((p) => !p.isSpeaker && !p.isHost)
+                        .length
+                    }
+                    )
+                  </h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+                    {participants
+                      .filter((p) => !p.isSpeaker && !p.isHost)
+                      .map((participant) => (
+                        <div
+                          key={participant.id}
+                          className="flex flex-col items-center gap-0"
+                        >
+                          <div className="relative">
+                            <div
+                              className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-xl font-medium bg-gray-500`}
+                            >
+                              <img
+                                src={`http://127.0.0.1:8000/api/v1/users/profile-picture/${participant.profilePicture}`}
+                                alt={participant.name}
+                                className="w-full h-full rounded-full object-cover"
+                                onError={(e) =>
+                                  (e.target.src = "/default-avatar.png")
+                                }
+                              />
+                            </div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-sm font-medium">
+                              {participant.name}
+                              {participant.id === clientId && " (You)"}
+                            </div>
+                          </div>
+                          {isHost &&
+                            !participant.isHost &&
+                            pendingRequests.some(
+                              (req) => req.id === participant.id
+                            ) && (
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="rounded-full w-5 h-5 flex items-center justify-center text-green-500 hover:text-green-700"
+                                  onClick={() => approveRequest(participant.id)}
+                                >
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="rounded-full w-5 h-5 flex items-center justify-center text-red-500 hover:text-red-700"
+                                  onClick={() => declineRequest(participant.id)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-6 flex justify-center gap-4 flex-wrap">
+                {!isHost && (
+                  <div className="flex flex-col items-center space-y-2">
+                    <Button
+                      variant="outline"
+                      onClick={requestToSpeak}
+                      disabled={speakerRequestStatus !== null || !isCallActive}
+                      className={`rounded-full w-12 h-12 flex items-center justify-center p-0 ${
+                        speakerRequestStatus === "pending"
+                          ? "text-yellow-500"
+                          : speakerRequestStatus === "approved"
+                          ? "text-green-500"
+                          : "text-gray-500"
+                      }`}
+                    >
+                      <Hand className="h-6 w-6" />
+                    </Button>
+                    {speakerRequestStatus && (
+                      <div
+                        className={`flex items-center text-sm ${
+                          speakerRequestStatus === "pending"
+                            ? "text-yellow-600"
+                            : speakerRequestStatus === "approved"
+                            ? "text-green-600"
+                            : "text-red-600"
+                        }`}
+                      >
+                        {speakerRequestStatus === "pending" && "Request sent"}
+                      </div>
                     )}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={isSharing ? stopScreenShare : startScreenShare}
-                    disabled={!isCallActive}
-                    className={`rounded-full w-12 h-12 flex items-center justify-center p-0 ${
-                      isSharing ? "text-green-500" : "text-gray-500"
-                    }`}
-                  >
-                    <ScreenShare className="h-6 w-6" />
-                  </Button>
-                  {/* New Button */}
-                  <Button
-                    variant="outline"
-                    onClick={createTempRecording}
-                    disabled={!isRecording}
-                    className={`rounded-full w-12 h-12 flex items-center justify-center p-0 ${
-                      isRecording ? "text-blue-500" : "text-gray-500"
-                    }`}
-                  >
-                    <Text className="h-6 w-6" />
-                  </Button>
-                  {isHost && (
-                    <>
-                      {/* Add the new End Live button here */}
+                  </div>
+                )}
+                {(isHost || isSpeaker) && (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={toggleMute}
+                      disabled={!isCallActive}
+                      className={`rounded-full w-12 h-12 flex items-center justify-center p-0 ${
+                        isMuted ? "text-red-500" : "text-green-500"
+                      }`}
+                    >
+                      {isMuted ? (
+                        <MicOff className="h-6 w-6" />
+                      ) : (
+                        <Mic className="h-6 w-6" />
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={isSharing ? stopScreenShare : startScreenShare}
+                      disabled={!isCallActive}
+                      className={`rounded-full w-12 h-12 flex items-center justify-center p-0 ${
+                        isSharing ? "text-green-500" : "text-gray-500"
+                      }`}
+                    >
+                      <ScreenShare className="h-6 w-6" />
+                    </Button>
+                  </>
+                )}
+                {(isHost || isSpeaker) && (
+                  <>
+                    {isHost && (
                       <Button
                         variant="destructive"
                         onClick={endLive}
@@ -1384,78 +1388,207 @@ export default function PodcastLive() {
                       >
                         End Live
                       </Button>
-                    </>
-                  )}
-                </>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="md:col-span-1">
-          <CardContent className="p-6 flex flex-col h-full">
-            <h3 className="font-semibold flex items-center gap-2 mb-4">
-              <MessageSquare className="w-5 h-5" />
-              Live Chat
-            </h3>
-            <div
-              ref={chatContainerRef}
-              className="flex-1 overflow-y-auto mb-4 space-y-2"
-            >
-              {chatMessages.map((msg, index) => (
-                <div
-                  key={index}
-                  className={`text-sm ${
-                    msg.sender === userCache.get(clientId)?.username
-                      ? "text-right"
-                      : "text-left"
-                  }`}
-                >
-                  <span className="font-medium">
-                    {msg.sender === userCache.get(clientId)?.username
-                      ? "You"
-                      : msg.sender}
-                    :
-                  </span>{" "}
-                  <span>{msg.content}</span>
-                </div>
-              ))}
-            </div>
-            <div className="mt-auto flex gap-2 w-full">
-              <input
-                type="text"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && sendChatMessage()}
-                placeholder="Type a message..."
-                className="flex-1 p-2 border rounded h-10"
-                disabled={!isCallActive}
-              />
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={sendChatMessage}
-                disabled={!isCallActive || !chatInput.trim()}
-                className="w-10 h-10 flex items-center justify-center"
+                    )}
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="md:col-span-1">
+            <CardContent className="p-6 flex flex-col h-full">
+              <h3 className="font-semibold flex items-center gap-2 mb-4">
+                <MessageSquare className="w-5 h-5" />
+                Live Chat
+              </h3>
+              <div
+                ref={chatContainerRef}
+                className="flex-1 overflow-y-auto mb-4 space-y-2"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="lucide lucide-send"
+                {chatMessages.map((msg, index) => (
+                  <div
+                    key={index}
+                    className={`text-sm ${
+                      msg.sender === userCache.get(clientId)?.username
+                        ? "text-right"
+                        : "text-left"
+                    }`}
+                  >
+                    <span className="font-medium">
+                      {msg.sender === userCache.get(clientId)?.username
+                        ? "You"
+                        : msg.sender}
+                      :
+                    </span>{" "}
+                    <span>{msg.content}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-auto flex gap-2 w-full">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyPress={(e) => e.key === "Enter" && sendChatMessage()}
+                  placeholder="Type a message..."
+                  className="flex-1 p-2 border rounded h-10"
+                  disabled={!isCallActive}
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={sendChatMessage}
+                  disabled={!isCallActive || !chatInput.trim()}
+                  className="w-10 h-10 flex items-center justify-center"
                 >
-                  <path d="m22 2-20 20" />
-                  <path d="M22 2 12 22 2 12" />
-                </svg>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="lucide lucide-send"
+                  >
+                    <path d="m22 2-20 20" />
+                    <path d="M22 2 12 22 2 12" />
+                  </svg>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+          {/* New Transcription and Summary Box */}
+          <Card className="md:col-span-3">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Button
+                  variant="outline"
+                  onClick={createTempRecording}
+                  className={`rounded-full w-8 h-8 flex items-center justify-center p-0 ${
+                    isRecording ? "text-blue-500" : "text-gray-500"
+                  } disabled:opacity-50`}
+                  disabled={!isCallActive || isTranscribing} // Disable while transcribing
+                >
+                  {isTranscribing ? (
+                    <svg
+                      className="animate-spin h-6 w-6 text-blue-500"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                  ) : (
+                    <Text className="h-6 w-6" />
+                  )}
+                </Button>
+                Transcription & Summary
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              {transcriptionData ? (
+                <div className="max-h-48 overflow-y-auto text-sm whitespace-pre-wrap">
+                  <div className="mb-4">
+                    <h4 className="font-semibold mb-2">Transcription</h4>
+                    <p className="font-mono">
+                      {transcriptionData.transcription}
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold mb-2">Summary</h4>
+                    <p className="whitespace-pre-wrap">
+                      {transcriptionData.summary
+                        .split("---")
+                        .map((section, index) => {
+                          if (section.trim().startsWith("#")) {
+                            return (
+                              <span
+                                key={index}
+                                className="block text-lg font-bold mt-2"
+                              >
+                                {section.trim()}
+                              </span>
+                            );
+                          } else if (section.trim().startsWith("**")) {
+                            return (
+                              <span
+                                key={index}
+                                className="block font-semibold mt-1"
+                              >
+                                {section.trim()}
+                              </span>
+                            );
+                          } else if (
+                            section
+                              .trim()
+                              .startsWith("[TIMESTAMP_NAVIGATION]") ||
+                            section.trim().startsWith("[/TIMESTAMP_NAVIGATION]")
+                          ) {
+                            return (
+                              <span key={index} className="block text-gray-600">
+                                {section.trim()}
+                              </span>
+                            );
+                          } else {
+                            return (
+                              <span key={index} className="block">
+                                {section
+                                  .trim()
+                                  .split("\n")
+                                  .map((line, lineIndex) => (
+                                    <span key={lineIndex} className="block">
+                                      {line.includes("**") ? (
+                                        <>
+                                          {line
+                                            .split("**")
+                                            .map((part, partIndex) =>
+                                              partIndex % 2 === 1 ? (
+                                                <strong key={partIndex}>
+                                                  {part}
+                                                </strong>
+                                              ) : (
+                                                <span key={partIndex}>
+                                                  {part}
+                                                </span>
+                                              )
+                                            )}
+                                        </>
+                                      ) : (
+                                        line
+                                      )}
+                                    </span>
+                                  ))}
+                              </span>
+                            );
+                          }
+                        })}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-gray-500">
+                  {isTranscribing
+                    ? "Transcribing..."
+                    : "Click the transcribe button to generate transcription and summary."}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

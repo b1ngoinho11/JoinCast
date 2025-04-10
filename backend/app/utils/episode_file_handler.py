@@ -1,11 +1,17 @@
 # app/utils/episode_file_handler.py
 import os
+import time
 import uuid
 import shutil
 import subprocess
 from fastapi import UploadFile
 from typing import Optional, Tuple, Dict, BinaryIO
 from datetime import datetime
+
+from openai import OpenAI
+from app.core.config import settings
+
+import whisper
 
 # Constants
 RECORDING_DIR = "episodes/recordings"
@@ -360,3 +366,156 @@ def save_chat_logs(room_id: str, chat_messages: list, episode_id: Optional[str] 
     except Exception as e:
         print(f"Error saving chat log: {e}")
         return None
+
+def transcribe_temp_recording(file_path: str) -> str:
+    """
+    Extract audio from a temporary recording using FFmpeg, transcribe it with Whisper,
+    and generate a structured summary using DeepSeek AI.
+    
+    Args:
+        file_path: Path to the temporary recording file (MP4)
+        
+    Returns:
+        A string containing the transcription followed by the summary, separated by a delimiter
+        
+    Raises:
+        Exception: If extraction, transcription, or summarization fails
+    """
+    audio_path = None
+    try:
+        # Generate audio output path
+        audio_path = f"{os.path.splitext(file_path)[0]}_audio.mp3"
+        print(f"Extracting audio from {file_path} to {audio_path}")
+        
+        # Extract audio using FFmpeg
+        result = subprocess.run([
+            'ffmpeg',
+            '-i', file_path,
+            '-vn',  # No video
+            '-acodec', 'mp3',
+            '-y',  # Overwrite output if exists
+            audio_path
+        ], check=True, stderr=subprocess.PIPE, text=True)
+        
+        # Verify audio file exists and is non-empty
+        if not os.path.exists(audio_path):
+            raise Exception(f"Audio file {audio_path} was not created")
+        if os.path.getsize(audio_path) == 0:
+            raise Exception(f"Audio file {audio_path} is empty")
+        
+        print(f"Audio file exists: {audio_path}, size: {os.path.getsize(audio_path)} bytes")
+        
+        # Load Whisper model and transcribe
+        print(f"Loading Whisper model 'turbo'")
+        start_time = time.time()
+        model = whisper.load_model("turbo")
+        print(f"Transcribing {audio_path}")
+        transcription_result = model.transcribe(audio_path)
+        
+        end_time = time.time()
+        print(f"Transcription took {end_time - start_time:.2f} seconds")
+        
+        # Format transcription to match transcribe_media() output
+        transcription_text = ""
+        for segment in transcription_result['segments']:
+            start = time.strftime('%H:%M:%S', time.gmtime(segment['start']))
+            end = time.strftime('%H:%M:%S', time.gmtime(segment['end']))
+            transcription_text += f"[{start} --> {end}] {segment['text']}\n"
+        
+        print(f"Transcription result length: {len(transcription_text)} characters")
+        
+        # Generate summary using DeepSeek AI
+        if not transcription_text:
+            summary = "No transcript available"
+        else:
+            print("Generating summary with DeepSeek AI")
+            try:
+                # Initialize OpenAI client with OpenRouter base URL
+                client = OpenAI(
+                    base_url="https://openrouter.ai/api/v1",
+                    api_key=settings.OPENROUTER_API_KEY,
+                )
+                
+                # Call DeepSeek AI for summarization
+                completion = client.chat.completions.create(
+                    extra_body={},
+                    model="deepseek/deepseek-chat-v3-0324:free",
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": f"""
+                            Create two outputs for this video transcript:
+
+                            1. A structured summary with the following format:
+                            
+                            # [Main Title]
+                            
+                            **Main Topic (Timestamp: XX:XX:XX - XX:XX:XX)** – [Brief overview]. 
+                            – [Key point 1]
+                            – [Key point 2]
+                            
+                            **Key Details**
+                            – [Important detail 1]
+                            – [Important detail 2]
+
+                            2. A timestamp navigation table in this format:
+                            [TIMESTAMP_NAVIGATION]
+                            - [XX:XX:XX] Topic description
+                            - [XX:XX:XX] Another topic
+                            - [XX:XX:XX] Key point
+                            [/TIMESTAMP_NAVIGATION]
+                            
+                            Formatting rules:
+                            1. Use # only for the main title
+                            2. Use **double asterisks** for section headers only
+                            3. Use – for bullet points (not -)
+                            4. Bold important terms within sentences with **double asterisks**
+                            5. Keep each bullet point on one line
+                            6. Don't use markdown symbols except as specified above
+                            7. Don't include any "let me know" or similar AI helper text
+                            
+                            Transcript:
+                            {transcription_text}
+                            """
+                        }
+                    ]
+                )
+                
+                summary = completion.choices[0].message.content
+                print(f"Summary generated, length: {len(summary)} characters")
+            except Exception as e:
+                summary = f"Summary generation error: {str(e)}"
+                print(f"Summary generation failed: {str(e)}")
+        
+        # Combine transcription and summary with a clear delimiter
+        combined_output = f"=== Transcription ===\n{transcription_text.strip()}\n\n=== Summary ===\n{summary}"
+        
+        # Clean up audio file after successful transcription and summarization
+        print(f"Cleaning up audio file: {audio_path}")
+        if os.path.exists(audio_path):
+            os.remove(audio_path)
+            print(f"Audio file deleted: {audio_path}")
+        else:
+            print(f"Audio file {audio_path} already deleted or never existed")
+        
+        # Optionally clean up the MP4 file
+        # delete_file(file_path)
+        
+        return combined_output
+    except subprocess.CalledProcessError as e:
+        print(f"FFmpeg error: {e.stderr}")
+        if audio_path and os.path.exists(audio_path):
+            print(f"Cleaning up audio file due to FFmpeg error: {audio_path}")
+            os.remove(audio_path)
+        raise Exception(f"Failed to extract audio: {e.stderr}")
+    except Exception as e:
+        print(f"Processing error: {str(e)}")
+        if audio_path and os.path.exists(audio_path):
+            print(f"Cleaning up audio file due to error: {audio_path}")
+            os.remove(audio_path)
+        raise Exception(f"Failed to process temporary recording: {str(e)}")
+    finally:
+        # Ensure cleanup even if unexpected errors occur
+        if audio_path and os.path.exists(audio_path):
+            print(f"Audio file still exists in finally block, cleaning up: {audio_path}")
+            os.remove(audio_path)

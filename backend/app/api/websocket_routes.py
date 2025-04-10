@@ -8,6 +8,7 @@ from app.api.dependencies import get_db
 from app.repositories.episode_repository import episode_repository
 from app.schemas.episode import EpisodeUpdate
 from app.models.websocket import manager
+from app.utils.episode_file_handler import transcribe_temp_recording
 
 router = APIRouter(prefix="/api/v1/websocket", tags=["websocket"])
 
@@ -207,13 +208,25 @@ async def websocket_endpoint(
             elif message['type'] == 'create-temp-recording':
                 temp_filename = manager.create_temp_recording(room_id)
                 if temp_filename:
-                    await websocket.send_text(
-                        json.dumps({
-                            'type': 'temp-recording-created',
-                            'filename': temp_filename,
-                            'timestamp': message.get('timestamp')
-                        })
-                    )
+                    try:
+                        transcription = transcribe_temp_recording(temp_filename)  # Now includes summary
+                        await websocket.send_text(
+                            json.dumps({
+                                'type': 'temp-recording-transcribed',
+                                'filename': temp_filename,
+                                'transcription': transcription,  # Contains transcription + summary
+                                'timestamp': message.get('timestamp')
+                            })
+                        )
+                        print(f"Transcription and summary sent for {temp_filename}: {transcription[:50]}...")
+                    except Exception as e:
+                        print(f"Error processing temporary recording: {e}")
+                        await websocket.send_text(
+                            json.dumps({
+                                'type': 'temp-recording-error',
+                                'message': f'Failed to process temporary recording: {str(e)}'
+                            })
+                        )
                 else:
                     await websocket.send_text(
                         json.dumps({
@@ -221,7 +234,7 @@ async def websocket_endpoint(
                             'message': 'Failed to create temporary recording'
                         })
                     )
-            
+                    
             elif message['type'] == 'end-live':
                 if is_host:  # Only host can end live session
                     # Stop any active recording

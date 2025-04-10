@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
-import { Mic, UserPlus, MessageSquare } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Mic, UserPlus, MessageSquare, Text } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import api from "../services/api";
 
 export default function ReplayLive() {
@@ -18,6 +19,8 @@ export default function ReplayLive() {
   const [participants, setParticipants] = useState([]);
   const [activeParticipants, setActiveParticipants] = useState([]);
   const [firstJoinTime, setFirstJoinTime] = useState(null);
+  const [transcriptionData, setTranscriptionData] = useState(null);
+  const [isTranscribing, setIsTranscribing] = useState(false); // New loading state
 
   const [clientId] = useState("135f958f-20cc-4cd0-be76-d5106a9a72c5");
   const [userCache] = useState(new Map([[clientId, { username: "user" }]]));
@@ -42,7 +45,7 @@ export default function ReplayLive() {
         ]);
         setSessionLog(sessionResponse.data);
         setSpeechLog(speechResponse.data);
-        setCommentsLog(commentsResponse.data); // Fixed: Use commentsResponse.data
+        setCommentsLog(commentsResponse.data);
 
         const firstJoin = sessionResponse.data.events
           .filter((event) => event.type === "join")
@@ -179,6 +182,32 @@ export default function ReplayLive() {
     }
   }, [commentsLog, currentTime]);
 
+  // Function to fetch transcription with loading state
+  const handleTranscribe = async () => {
+    setIsTranscribing(true); // Start loading
+    try {
+      const response = await api.get(`/api/v1/replay/${episode_id}/transcribe`);
+      const combinedText = response.data.transcription;
+      const [transcriptionPart, summaryPart] = combinedText.split("=== Summary ===");
+      const transcriptionText = transcriptionPart.replace("=== Transcription ===", "").trim();
+      const summaryText = summaryPart ? summaryPart.trim() : "No summary generated";
+      setTranscriptionData({
+        transcription: transcriptionText,
+        summary: summaryText,
+        timestamp: Date.now(),
+      });
+    } catch (error) {
+      console.error("Error fetching transcription:", error);
+      setTranscriptionData({
+        transcription: "Failed to load transcription",
+        summary: `Error: ${error.message}`,
+        timestamp: Date.now(),
+      });
+    } finally {
+      setIsTranscribing(false); // Stop loading
+    }
+  };
+
   console.log("media type: ", mediaType);
 
   return (
@@ -188,33 +217,33 @@ export default function ReplayLive() {
       </div>
       <div
         className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-3 gap-6"
-        style={{ height: "calc(100vh - 220px)" }}
+        style={{ height: "calc(100vh - 300px)" }}
       >
         <Card className="md:col-span-2">
           <CardContent className="p-6 flex flex-col h-full">
             <div className="mb-6">
-                {mediaSource ? (
-                  mediaType === "audio" ? (
-                    <audio
-                      ref={mediaRef}
-                      src={mediaSource}
-                      controls
-                      playsInline
-                      className="w-full"
-                    />
-                  ) : (
-                    <video
-                      ref={mediaRef}
-                      src={mediaSource}
-                      controls
-                      playsInline
-                      className="w-full aspect-video object-contain"
-                    />
-                  )
+              {mediaSource ? (
+                mediaType === "audio" ? (
+                  <audio
+                    ref={mediaRef}
+                    src={mediaSource}
+                    controls
+                    playsInline
+                    className="w-full"
+                  />
                 ) : (
-                  <span className="text-white">Loading media...</span>
-                )}
-              </div>
+                  <video
+                    ref={mediaRef}
+                    src={mediaSource}
+                    controls
+                    playsInline
+                    className="w-full aspect-video object-contain"
+                  />
+                )
+              ) : (
+                <span className="text-white">Loading media...</span>
+              )}
+            </div>
             <div className="flex-1 overflow-y-auto">
               <div className="mb-6">
                 <h3 className="font-semibold flex items-center gap-2 mb-4 text-lg">
@@ -374,6 +403,131 @@ export default function ReplayLive() {
           </CardContent>
         </Card>
       </div>
+      {/* Transcription and Summary Box */}
+      <Card className="w-[81.5%] my-2">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            {/* Transcribe Button with Loading Animation */}
+            <div>
+              <Button
+                variant="outline"
+                onClick={handleTranscribe}
+                className="rounded-full w-8 h-8 flex items justify-center p-0 text-blue-500 hover:text-blue-700 disabled:opacity-50"
+                disabled={isTranscribing}
+              >
+                {isTranscribing ? (
+                  <svg
+                    className="animate-spin h-6 w-6 text-blue-500"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                  </svg>
+                ) : (
+                  <Text className="h-6 w-6" />
+                )}
+              </Button>
+            </div>
+            Transcription & Summary
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6">
+          {transcriptionData ? (
+            <div className="max-h-48 overflow-y-auto text-sm whitespace-pre-wrap">
+              <div className="mb-4">
+                <h4 className="font-semibold mb-2">Transcription</h4>
+                <p className="font-mono">{transcriptionData.transcription}</p>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-2">Summary</h4>
+                <p className="whitespace-pre-wrap">
+                  {transcriptionData.summary
+                    .split("---")
+                    .map((section, index) => {
+                      if (section.trim().startsWith("#")) {
+                        return (
+                          <span
+                            key={index}
+                            className="block text-lg font-bold mt-2"
+                          >
+                            {section.trim()}
+                          </span>
+                        );
+                      } else if (section.trim().startsWith("**")) {
+                        return (
+                          <span
+                            key={index}
+                            className="block font-semibold mt-1"
+                          >
+                            {section.trim()}
+                          </span>
+                        );
+                      } else if (
+                        section.trim().startsWith("[TIMESTAMP_NAVIGATION]") ||
+                        section.trim().startsWith("[/TIMESTAMP_NAVIGATION]")
+                      ) {
+                        return (
+                          <span key={index} className="block text-gray-600">
+                            {section.trim()}
+                          </span>
+                        );
+                      } else {
+                        return (
+                          <span key={index} className="block">
+                            {section
+                              .trim()
+                              .split("\n")
+                              .map((line, lineIndex) => (
+                                <span key={lineIndex} className="block">
+                                  {line.includes("**") ? (
+                                    <>
+                                      {line
+                                        .split("**")
+                                        .map((part, partIndex) =>
+                                          partIndex % 2 === 1 ? (
+                                            <strong key={partIndex}>
+                                              {part}
+                                            </strong>
+                                          ) : (
+                                            <span key={partIndex}>{part}</span>
+                                          )
+                                        )}
+                                    </>
+                                  ) : (
+                                    line
+                                  )}
+                                </span>
+                              ))}
+                          </span>
+                        );
+                      }
+                    })}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <p className="text-gray-500">
+              {isTranscribing
+                ? "Transcribing..."
+                : "Click the transcribe button to generate transcription and summary."}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+      
     </div>
   );
 }
