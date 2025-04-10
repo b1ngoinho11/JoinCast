@@ -14,16 +14,16 @@ import "../css/NavBar.css";
 import { AuthContext } from "../contexts/authContext";
 
 function NavbarDefault() {
-  const [searchQuery, setSearchQuery] = React.useState("");
+  // const [searchQuery, setSearchQuery] = React.useState("");
   const { isLoggedIn, logout, user } = React.useContext(AuthContext);
 
   // API base URL for profile images - should match your backend
   const API_URL = "http://localhost:8000/api/v1";
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    alert(`Searching for ${searchQuery}`);
-  };
+  // const handleSearch = (e) => {
+  //   e.preventDefault();
+  //   alert(`Searching for ${searchQuery}`);
+  // };
 
   const CustomToggle = React.forwardRef(({ children, onClick }, ref) => (
     <a
@@ -86,7 +86,7 @@ function NavbarDefault() {
         </div>
 
         {/* Middle Section */}
-        <Form className="d-flex mx-4" style={{ maxWidth: "500px", flex: 1 }}>
+        {/* <Form className="d-flex mx-4" style={{ maxWidth: "500px", flex: 1 }}>
           <FormControl
             type="search"
             placeholder="Search"
@@ -103,7 +103,7 @@ function NavbarDefault() {
           >
             <BsSearch size={20} color="345766" />
           </Button>
-        </Form>
+        </Form> */}
 
         {/* Right Section */}
         <div

@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Container, Row, Col, Button } from "react-bootstrap";
-import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
+import { Container, Row, Col, Button, FormControl } from "react-bootstrap";
+import { IoIosArrowBack, IoIosArrowForward, IoIosSearch } from "react-icons/io";
 import PodcastCard from "../components/PodcastCard";
 import ShowCard from "../components/ShowCard"; // Adjusted import path
 import "../css/HomePage.css";
@@ -31,6 +31,7 @@ const HomePage = () => {
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [randomShow, setRandomShow] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const handleScroll = (scrollRef, scrollOffset) => {
     if (scrollRef.current) {
@@ -289,11 +290,46 @@ const HomePage = () => {
     return { prevIndex, currentIndex: currentBannerIndex, nextIndex };
   };
 
+  const filterPodcasts = (podcasts) => {
+    if (!searchQuery) return podcasts;
+    return podcasts.filter((podcast) =>
+      podcast.title.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  };
+
   console.log(randomShow);
 
   return (
     <div>
       <Container style={{ maxWidth: "90%", padding: "0" }}>
+        {/* Add Search Bar */}
+        <div className="d-flex justify-content-center my-4">
+          <div style={{ width: "60%", position: "relative" }}>
+            <FormControl
+              type="search"
+              placeholder="Search podcasts..."
+              className="me-2"
+              aria-label="Search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                paddingLeft: "2.5rem",
+                borderRadius: "20px",
+                height: "40px",
+              }}
+            />
+            <IoIosSearch
+              style={{
+                position: "absolute",
+                left: "15px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "#6c757d",
+              }}
+            />
+          </div>
+        </div>
+
         {/* Banner Section */}
         {bannerPodcasts.length > 0 && (
           <div className="banner-container">
@@ -433,18 +469,21 @@ const HomePage = () => {
             className="podcast-row"
             onScroll={() => updatVisibility(trendingPodcastScroll)}
           >
-            {watchNowPodcasts.map((podcast) => (
-              <div
-                key={podcast.id}
-                className="podcast-card-wrapper"
-              >
-                <PodcastCard
-                  podcast={podcast}
-                  user={podcast.creator}
-                  link={"recording/"}
-                />
+            {filterPodcasts(watchNowPodcasts).length > 0 ? (
+              filterPodcasts(watchNowPodcasts).map((podcast) => (
+                <div key={podcast.id} className="podcast-card-wrapper">
+                  <PodcastCard
+                    podcast={podcast}
+                    user={podcast.creator}
+                    link={"recording/"}
+                  />
+                </div>
+              ))
+            ) : (
+              <div className="w-100 text-center py-4">
+                <p>No podcasts found matching your search.</p>
               </div>
-            ))}
+            )}
           </div>
           {leftTrendingScroll && (
             <Button
@@ -477,18 +516,21 @@ const HomePage = () => {
             className="podcast-row"
             onScroll={() => updatVisibility(nowLivePodcastScroll)}
           >
-            {nowLivePodcasts.map((podcast) => (
-              <div
-                key={podcast.id}
-                className="podcast-card-wrapper"
-              >
-                <PodcastCard
-                  podcast={podcast}
-                  user={podcast.creator}
-                  link={"podcast/"}
-                />
+            {filterPodcasts(nowLivePodcasts).length > 0 ? (
+              filterPodcasts(nowLivePodcasts).map((podcast) => (
+                <div key={podcast.id} className="podcast-card-wrapper">
+                  <PodcastCard
+                    podcast={podcast}
+                    user={podcast.creator}
+                    link={"podcast/"}
+                  />
+                </div>
+              ))
+            ) : (
+              <div className="w-100 text-center py-4">
+                <p>No live podcasts found matching your search.</p>
               </div>
-            ))}
+            )}
           </div>
           {leftLiveScroll && (
             <Button
@@ -536,18 +578,21 @@ const HomePage = () => {
             className="podcast-row"
             onScroll={() => updatVisibility(replayPodcastScroll)}
           >
-            {replayPodcasts.map((podcast) => (
-              <div
-                key={podcast.id}
-                className="podcast-card-wrapper"
-              >
-                <PodcastCard
-                  podcast={podcast}
-                  user={podcast.creator}
-                  link={"replay/"}
-                />
+            {filterPodcasts(replayPodcasts).length > 0 ? (
+              filterPodcasts(replayPodcasts).map((podcast) => (
+                <div key={podcast.id} className="podcast-card-wrapper">
+                  <PodcastCard
+                    podcast={podcast}
+                    user={podcast.creator}
+                    link={"replay/"}
+                  />
+                </div>
+              ))
+            ) : (
+              <div className="w-100 text-center py-4">
+                <p>No replays found matching your search.</p>
               </div>
-            ))}
+            )}
           </div>
           {leftReplayScroll && (
             <Button
