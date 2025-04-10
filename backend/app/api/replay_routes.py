@@ -1,9 +1,9 @@
-# app/api/streaming_routes.py
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 import os
 import mimetypes
+import ffmpeg
 
 from app.api.dependencies import get_db
 from app.repositories.episode_repository import episode_repository
@@ -11,11 +11,29 @@ from app.utils.episode_file_handler import LIVES_DIR, LIVES_LOG_DIR, SESSIONS_LO
 
 router = APIRouter(prefix="/api/v1/replay", tags=["replay"])
 
+def has_video_stream(file_path: str) -> bool:
+    """
+    Check if the MP4 file has a video stream using ffprobe.
+    Returns True if a video stream exists, False otherwise.
+    """
+    if not file_path.lower().endswith('.mp4'):
+        return False  # Only check MP4 files
+    try:
+        probe = ffmpeg.probe(file_path, select_streams='v')
+        return len(probe.get('streams', [])) > 0  # True if video streams exist
+    except ffmpeg.Error as e:
+        print(f"Error checking video stream for {file_path}: {e.stderr.decode()}")
+        return True  # Default to video if analysis fails
+    except Exception as e:
+        print(f"Unexpected error checking video stream for {file_path}: {e}")
+        return True  # Default to video if analysis fails
+
 @router.get("/{episode_id}")
 async def get_live_media(episode_id: str, db: Session = Depends(get_db)):
     """
     Get the media file (video/audio) for a live episode.
     Returns the media file with appropriate content type.
+    If an MP4 file has no video stream, treat it as audio.
     """
     episode = episode_repository.get(db, id=episode_id)
     if not episode or episode.type != "live":
@@ -39,6 +57,13 @@ async def get_live_media(episode_id: str, db: Session = Depends(get_db)):
     content_type, _ = mimetypes.guess_type(file_path)
     if not content_type:
         content_type = 'application/octet-stream'
+    
+    # Special handling for MP4 files: check if they have a video stream
+    if media_file.lower().endswith('.mp4'):
+        if not has_video_stream(file_path):
+            content_type = 'audio/mp4'  # Treat as audio if no video stream
+    
+    print(f"Serving file: {file_path} with content type: {content_type}")
     
     return FileResponse(
         path=file_path,

@@ -28,6 +28,7 @@ dependencies = [
     "openai-whisper @ git+https://github.com/openai/whisper.git",
     "moviepy (>=2.1.2,<3.0.0)",
     "openai (>=1.71.0,<2.0.0)",
+    "ffmpeg-python (>=0.2.0,<0.3.0)",
 ]
 
 
