@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Container, Row, Col, Spinner, Alert } from "react-bootstrap";
-import "tailwindcss/tailwind.css"; // Ensure Tailwind CSS is imported
+// import "tailwindcss/tailwind.css"; // Ensure Tailwind CSS is imported
 import { Podcast } from "lucide-react";
 import PodcastCardHorizontal from "@/components/PodcastCardHorizontal";
 
