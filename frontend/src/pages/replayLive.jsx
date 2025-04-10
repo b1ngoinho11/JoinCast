@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mic, UserPlus, MessageSquare, Text } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import api from "../services/api";
+import SummaryCard from "../components/summaryCard";
 
 export default function ReplayLive() {
   const { episode_id } = useParams();
@@ -29,7 +30,9 @@ export default function ReplayLive() {
   useEffect(() => {
     const fetchEpisodeData = async () => {
       try {
-        const episodeResponse = await api.get(`/api/v1/episodes/live/${episode_id}`);
+        const episodeResponse = await api.get(
+          `/api/v1/episodes/live/${episode_id}`
+        );
         setEpisodeData(episodeResponse.data);
       } catch (error) {
         console.error("Error fetching episode data:", error);
@@ -38,11 +41,12 @@ export default function ReplayLive() {
 
     const fetchLogs = async () => {
       try {
-        const [sessionResponse, speechResponse, commentsResponse] = await Promise.all([
-          api.get(`/api/v1/replay/${episode_id}/session_log`),
-          api.get(`/api/v1/replay/${episode_id}/speech_log`),
-          api.get(`/api/v1/replay/${episode_id}/comments_log`),
-        ]);
+        const [sessionResponse, speechResponse, commentsResponse] =
+          await Promise.all([
+            api.get(`/api/v1/replay/${episode_id}/session_log`),
+            api.get(`/api/v1/replay/${episode_id}/speech_log`),
+            api.get(`/api/v1/replay/${episode_id}/comments_log`),
+          ]);
         setSessionLog(sessionResponse.data);
         setSpeechLog(speechResponse.data);
         setCommentsLog(commentsResponse.data);
@@ -73,7 +77,9 @@ export default function ReplayLive() {
 
     const fetchParticipants = async () => {
       try {
-        const clientIds = [...new Set(sessionLog.events.map((event) => event.client_id))];
+        const clientIds = [
+          ...new Set(sessionLog.events.map((event) => event.client_id)),
+        ];
         const creatorId = episodeData?.creator_id;
         const participantPromises = clientIds.map(async (id) => {
           try {
@@ -93,11 +99,15 @@ export default function ReplayLive() {
             return null;
           }
         });
-        const participantsData = (await Promise.all(participantPromises)).filter((p) => p !== null);
+        const participantsData = (
+          await Promise.all(participantPromises)
+        ).filter((p) => p !== null);
         setParticipants(participantsData);
 
         if (creatorId && !participantsData.some((p) => p.id === creatorId)) {
-          console.warn(`Host with creator_id ${creatorId} not found in session log`);
+          console.warn(
+            `Host with creator_id ${creatorId} not found in session log`
+          );
         }
       } catch (error) {
         console.error("Error fetching participants:", error);
@@ -150,9 +160,15 @@ export default function ReplayLive() {
           activeSet.add(event.client_id);
         } else if (event.type === "leave") {
           activeSet.delete(event.client_id);
-        } else if (event.type === "speaker-request-response" && event.approved) {
+        } else if (
+          event.type === "speaker-request-response" &&
+          event.approved
+        ) {
           speakerMap.set(event.recipient, true);
-        } else if (event.type === "revoke-speaker" && event.recipient !== creatorId) {
+        } else if (
+          event.type === "revoke-speaker" &&
+          event.recipient !== creatorId
+        ) {
           speakerMap.set(event.recipient, false);
         }
       }
@@ -174,11 +190,19 @@ export default function ReplayLive() {
         isSpeaking: speakingMap.get(p.id) || false,
       }));
     setActiveParticipants(active);
-  }, [currentTime, sessionLog, speechLog, firstJoinTime, participants, episodeData?.creator_id]);
+  }, [
+    currentTime,
+    sessionLog,
+    speechLog,
+    firstJoinTime,
+    participants,
+    episodeData?.creator_id,
+  ]);
 
   useEffect(() => {
     if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      chatContainerRef.current.scrollTop =
+        chatContainerRef.current.scrollHeight;
     }
   }, [commentsLog, currentTime]);
 
@@ -188,9 +212,14 @@ export default function ReplayLive() {
     try {
       const response = await api.get(`/api/v1/replay/${episode_id}/transcribe`);
       const combinedText = response.data.transcription;
-      const [transcriptionPart, summaryPart] = combinedText.split("=== Summary ===");
-      const transcriptionText = transcriptionPart.replace("=== Transcription ===", "").trim();
-      const summaryText = summaryPart ? summaryPart.trim() : "No summary generated";
+      const [transcriptionPart, summaryPart] =
+        combinedText.split("=== Summary ===");
+      const transcriptionText = transcriptionPart
+        .replace("=== Transcription ===", "")
+        .trim();
+      const summaryText = summaryPart
+        ? summaryPart.trim()
+        : "No summary generated";
       setTranscriptionData({
         transcription: transcriptionText,
         summary: summaryText,
@@ -213,7 +242,9 @@ export default function ReplayLive() {
   return (
     <div className="flex flex-col items-center p-4 min-h-screen">
       <div className="w-full max-w-6xl flex justify-between items-center mb-4">
-        <h1 className="text-xl font-bold">{episodeData?.name || "Loading..."}</h1>
+        <h1 className="text-xl font-bold">
+          {episodeData?.name || "Loading..."}
+        </h1>
       </div>
       <div
         className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-3 gap-6"
@@ -249,7 +280,11 @@ export default function ReplayLive() {
                 <h3 className="font-semibold flex items-center gap-2 mb-4 text-lg">
                   <Mic className="w-5 h-5" />
                   Speakers (
-                  {activeParticipants.filter((p) => p.isSpeaker || p.isHost).length})
+                  {
+                    activeParticipants.filter((p) => p.isSpeaker || p.isHost)
+                      .length
+                  }
+                  )
                 </h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
                   {activeParticipants
@@ -297,7 +332,10 @@ export default function ReplayLive() {
                 <h3 className="font-semibold flex items-center gap-2 mb-4 text-lg">
                   <UserPlus className="w-5 h-5" />
                   Listeners (
-                  {activeParticipants.filter((p) => !p.isSpeaker && !p.isHost).length}
+                  {
+                    activeParticipants.filter((p) => !p.isSpeaker && !p.isHost)
+                      .length
+                  }
                   )
                 </h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
@@ -349,7 +387,9 @@ export default function ReplayLive() {
               className="flex-1 overflow-y-auto mb-4 space-y-2"
             >
               {commentsLog.messages.map((msg, index) => {
-                const relativeTime = firstJoinTime ? msg.timestamp - firstJoinTime : 0;
+                const relativeTime = firstJoinTime
+                  ? msg.timestamp - firstJoinTime
+                  : 0;
                 const isActive = relativeTime <= currentTime * 1000;
                 return (
                   <div
@@ -404,16 +444,15 @@ export default function ReplayLive() {
         </Card>
       </div>
       {/* Transcription and Summary Box */}
-      <Card className="w-[81.5%] my-2">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            {/* Transcribe Button with Loading Animation */}
-            <div>
+      <div className="w-[81.5%] my-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
               <Button
                 variant="outline"
                 onClick={handleTranscribe}
-                className="rounded-full w-8 h-8 flex items justify-center p-0 text-blue-500 hover:text-blue-700 disabled:opacity-50"
                 disabled={isTranscribing}
+                className="rounded-full w-8 h-8 flex items-center justify-center p-0 text-blue-500 hover:text-blue-700 disabled:opacity-50"
               >
                 {isTranscribing ? (
                   <svg
@@ -440,94 +479,30 @@ export default function ReplayLive() {
                   <Text className="h-6 w-6" />
                 )}
               </Button>
-            </div>
-            Transcription & Summary
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          {transcriptionData ? (
-            <div className="max-h-48 overflow-y-auto text-sm whitespace-pre-wrap">
-              <div className="mb-4">
-                <h4 className="font-semibold mb-2">Transcription</h4>
-                <p className="font-mono">{transcriptionData.transcription}</p>
-              </div>
-              <div>
-                <h4 className="font-semibold mb-2">Summary</h4>
-                <p className="whitespace-pre-wrap">
-                  {transcriptionData.summary
-                    .split("---")
-                    .map((section, index) => {
-                      if (section.trim().startsWith("#")) {
-                        return (
-                          <span
-                            key={index}
-                            className="block text-lg font-bold mt-2"
-                          >
-                            {section.trim()}
-                          </span>
-                        );
-                      } else if (section.trim().startsWith("**")) {
-                        return (
-                          <span
-                            key={index}
-                            className="block font-semibold mt-1"
-                          >
-                            {section.trim()}
-                          </span>
-                        );
-                      } else if (
-                        section.trim().startsWith("[TIMESTAMP_NAVIGATION]") ||
-                        section.trim().startsWith("[/TIMESTAMP_NAVIGATION]")
-                      ) {
-                        return (
-                          <span key={index} className="block text-gray-600">
-                            {section.trim()}
-                          </span>
-                        );
-                      } else {
-                        return (
-                          <span key={index} className="block">
-                            {section
-                              .trim()
-                              .split("\n")
-                              .map((line, lineIndex) => (
-                                <span key={lineIndex} className="block">
-                                  {line.includes("**") ? (
-                                    <>
-                                      {line
-                                        .split("**")
-                                        .map((part, partIndex) =>
-                                          partIndex % 2 === 1 ? (
-                                            <strong key={partIndex}>
-                                              {part}
-                                            </strong>
-                                          ) : (
-                                            <span key={partIndex}>{part}</span>
-                                          )
-                                        )}
-                                    </>
-                                  ) : (
-                                    line
-                                  )}
-                                </span>
-                              ))}
-                          </span>
-                        );
-                      }
-                    })}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <p className="text-gray-500">
-              {isTranscribing
-                ? "Transcribing..."
-                : "Click the transcribe button to generate transcription and summary."}
-            </p>
-          )}
-        </CardContent>
-      </Card>
-      
+              Transcription & Summary
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            {transcriptionData ? (
+              <SummaryCard
+                summary={`${transcriptionData.transcription}\n\n=== Summary ===\n${transcriptionData.summary}`}
+                onTimestampClick={(seconds) => {
+                  if (mediaRef.current) {
+                    mediaRef.current.currentTime = seconds;
+                    mediaRef.current.play();
+                  }
+                }}
+              />
+            ) : (
+              <p className="text-gray-500">
+                {isTranscribing
+                  ? "Transcribing..."
+                  : "Click the transcribe button to generate transcription and summary."}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

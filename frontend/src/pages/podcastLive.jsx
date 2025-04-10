@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import SummaryCard from "../components/summaryCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"; // Added CardHeader, CardTitle
 import {
   Mic,
@@ -1459,17 +1460,15 @@ export default function PodcastLive() {
               </div>
             </CardContent>
           </Card>
-          {/* New Transcription and Summary Box */}
+          {/* Transcription and Summary Box */}
           <Card className="md:col-span-3">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Button
                   variant="outline"
                   onClick={createTempRecording}
-                  className={`rounded-full w-8 h-8 flex items-center justify-center p-0 ${
-                    isRecording ? "text-blue-500" : "text-gray-500"
-                  } disabled:opacity-50`}
-                  disabled={!isCallActive || isTranscribing} // Disable while transcribing
+                  disabled={!isCallActive || isTranscribing}
+                  className="rounded-full w-8 h-8 flex items-center justify-center p-0 text-blue-500 hover:text-blue-700 disabled:opacity-50"
                 >
                   {isTranscribing ? (
                     <svg
@@ -1501,84 +1500,9 @@ export default function PodcastLive() {
             </CardHeader>
             <CardContent className="p-6">
               {transcriptionData ? (
-                <div className="max-h-48 overflow-y-auto text-sm whitespace-pre-wrap">
-                  <div className="mb-4">
-                    <h4 className="font-semibold mb-2">Transcription</h4>
-                    <p className="font-mono">
-                      {transcriptionData.transcription}
-                    </p>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold mb-2">Summary</h4>
-                    <p className="whitespace-pre-wrap">
-                      {transcriptionData.summary
-                        .split("---")
-                        .map((section, index) => {
-                          if (section.trim().startsWith("#")) {
-                            return (
-                              <span
-                                key={index}
-                                className="block text-lg font-bold mt-2"
-                              >
-                                {section.trim()}
-                              </span>
-                            );
-                          } else if (section.trim().startsWith("**")) {
-                            return (
-                              <span
-                                key={index}
-                                className="block font-semibold mt-1"
-                              >
-                                {section.trim()}
-                              </span>
-                            );
-                          } else if (
-                            section
-                              .trim()
-                              .startsWith("[TIMESTAMP_NAVIGATION]") ||
-                            section.trim().startsWith("[/TIMESTAMP_NAVIGATION]")
-                          ) {
-                            return (
-                              <span key={index} className="block text-gray-600">
-                                {section.trim()}
-                              </span>
-                            );
-                          } else {
-                            return (
-                              <span key={index} className="block">
-                                {section
-                                  .trim()
-                                  .split("\n")
-                                  .map((line, lineIndex) => (
-                                    <span key={lineIndex} className="block">
-                                      {line.includes("**") ? (
-                                        <>
-                                          {line
-                                            .split("**")
-                                            .map((part, partIndex) =>
-                                              partIndex % 2 === 1 ? (
-                                                <strong key={partIndex}>
-                                                  {part}
-                                                </strong>
-                                              ) : (
-                                                <span key={partIndex}>
-                                                  {part}
-                                                </span>
-                                              )
-                                            )}
-                                        </>
-                                      ) : (
-                                        line
-                                      )}
-                                    </span>
-                                  ))}
-                              </span>
-                            );
-                          }
-                        })}
-                    </p>
-                  </div>
-                </div>
+                <SummaryCard
+                  summary={`${transcriptionData.transcription}\n\n=== Summary ===\n${transcriptionData.summary}`}
+                />
               ) : (
                 <p className="text-gray-500">
                   {isTranscribing
