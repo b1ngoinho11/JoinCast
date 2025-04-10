@@ -135,7 +135,7 @@ const QuizComponent = ({ episodeId }) => {
             <Trophy size={48} className="text-warning" />
             <Zap size={24} className="text-primary lightning-icon" />
           </div>
-          <h3>Test Your Knowledge</h3>
+          <h3 className="text-muted">Test Your Knowledge</h3>
           <p className="text-muted">Challenge yourself with this 10-question quiz about the episode!</p>
           <Button 
             variant="primary" 
