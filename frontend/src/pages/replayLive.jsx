@@ -179,6 +179,8 @@ export default function ReplayLive() {
     }
   }, [commentsLog, currentTime]);
 
+  console.log("media type: ", mediaType);
+
   return (
     <div className="flex flex-col items-center p-4 min-h-screen">
       <div className="w-full max-w-6xl flex justify-between items-center mb-4">
