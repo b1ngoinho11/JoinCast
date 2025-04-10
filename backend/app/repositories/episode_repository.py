@@ -201,4 +201,10 @@ class EpisodeRepository(BaseRepository[Episode]):
             return None
         return episode.transcript
     
+    def get_similar_names(self, db: Session, *, name: str) -> List[Episode]:
+        """
+        Get all episodes with similar names.
+        """
+        return db.query(Episode).filter(Episode.name.ilike(f"%{name}%")).all()
+    
 episode_repository = EpisodeRepository(Episode)

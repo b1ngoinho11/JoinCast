@@ -134,3 +134,13 @@ def get_episode_quiz(
     # Ensure the quiz is a valid string
     quiz = episode.generate_quiz()
     return quiz
+
+@router.get('/search/', response_model=List[EpisodeResponse])  # Note: changed to List since you might get multiple
+def search_episodes_by_name(
+    name: str,  # This will be a query parameter like ?name=catty
+    db: Session = Depends(get_db)
+) -> List[EpisodeResponse]:
+    episodes = episode_repository.get_similar_names(db, name=name)
+    if not episodes:
+        raise HTTPException(status_code=404, detail="No similar names found")
+    return episodes

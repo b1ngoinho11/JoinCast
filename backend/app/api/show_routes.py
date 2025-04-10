@@ -102,3 +102,13 @@ def get_episodes_for_show(
     
     # The episodes should already be loaded through the relationship
     return show.episodes
+
+@router.get('/search/', response_model=List[ShowResponse])  # Note: changed to List since you might get multiple
+def search_shows_by_name(
+    name: str,  # This will be a query parameter like ?name=catty
+    db: Session = Depends(get_db)
+) -> List[ShowResponse]:
+    shows = show_repository.get_similar_names(db, name=name)
+    if not shows:
+        raise HTTPException(status_code=404, detail="No similar names found")
+    return shows

@@ -51,5 +51,9 @@ class ShowRepository(BaseRepository[Show]):
         """Get all shows created by a specific user."""
         return db.query(Show).filter(Show.creator_id == creator_id).all()
 
+    def get_similar_names(self, db: Session, *, name: str) -> List[Show]:
+        """Get shows with similar names."""
+        return db.query(Show).filter(Show.name.ilike(f"%{name}%")).all()
+
 # Initialize the repository
 show_repository = ShowRepository(Show)
